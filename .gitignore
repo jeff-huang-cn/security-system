@@ -96,20 +96,6 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 
-# 说明：系统自动生成的临时文件（Mac/Windows 特有）
-
-
-# 敏感信息和配置
-*.properties
-*.yml
-!application.yml
-!application.properties
-/application-dev.yml
-/application-prod.yml
-
-# 说明：按需忽略含敏感信息的配置，保留基础配置、忽略环境特定配置
-
-
 # IDE 插件相关
 .idea/inspectionProfiles/
 .idea/codeStyles/
