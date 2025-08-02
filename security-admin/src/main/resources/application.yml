@@ -1,0 +1,45 @@
+# 服务器配置
+server:
+  port: 8080
+
+# 数据库配置
+spring:
+  application:
+    name: auth-backend
+  datasource:
+    url: jdbc:mysql://localhost:3306/auth_system?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    type: com.alibaba.druid.pool.DruidDataSource
+    druid:
+      initial-size: 5
+      min-idle: 5
+      max-active: 20
+      max-wait: 60000
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      validation-query: SELECT 1
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+
+  # Flyway 数据库迁移配置
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+    table: flyway_schema_history_backend
+
+  # OAuth2 资源服务器配置
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:9001
+
+# 日志配置
+logging:
+  level:
+    com.webapp.security: DEBUG
+    org.springframework.security: DEBUG

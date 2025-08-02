@@ -1,0 +1,174 @@
+package com.webapp.security.core.service.impl;
+
+import cn.hutool.core.util.StrUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.webapp.security.core.entity.SysRole;
+import com.webapp.security.core.entity.SysRolePermission;
+import com.webapp.security.core.mapper.SysRoleMapper;
+import com.webapp.security.core.mapper.SysRolePermissionMapper;
+import com.webapp.security.core.mapper.SysUserRoleMapper;
+import com.webapp.security.core.service.SysRoleService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
+
+/**
+ * 系统角色服务实现类
+ */
+@Service
+@RequiredArgsConstructor
+public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> implements SysRoleService {
+
+    private final SysRolePermissionMapper rolePermissionMapper;
+    private final SysUserRoleMapper userRoleMapper;
+
+    @Override
+    public SysRole getByCode(String code) {
+        if (StrUtil.isBlank(code)) {
+            return null;
+        }
+        return baseMapper.selectByRoleCode(code);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean createRole(SysRole role) {
+        if (role == null || StrUtil.isBlank(role.getRoleCode())) {
+            return false;
+        }
+
+        // 检查角色编码是否已存在
+        if (getByCode(role.getRoleCode()) != null) {
+            throw new RuntimeException("角色编码已存在");
+        }
+
+        role.setCreateTime(LocalDateTime.now());
+        role.setUpdateTime(LocalDateTime.now());
+        role.setStatus(1); // 默认启用
+        role.setDeleted(0); // 默认未删除
+        return save(role);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean updateRole(SysRole role) {
+        if (role == null || role.getRoleId() == null) {
+            return false;
+        }
+
+        SysRole existingRole = getById(role.getRoleId());
+        if (existingRole == null) {
+            throw new RuntimeException("角色不存在");
+        }
+
+        // 检查角色编码是否被其他角色使用
+        if (StrUtil.isNotBlank(role.getRoleCode()) && !role.getRoleCode().equals(existingRole.getRoleCode())) {
+            SysRole roleByCode = getByCode(role.getRoleCode());
+            if (roleByCode != null && !roleByCode.getRoleId().equals(role.getRoleId())) {
+                throw new RuntimeException("角色编码已被其他角色使用");
+            }
+        }
+
+        role.setUpdateTime(LocalDateTime.now());
+        return updateById(role);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deleteRole(Long roleId) {
+        if (roleId == null) {
+            return false;
+        }
+
+        SysRole role = getById(roleId);
+        if (role == null) {
+            return false;
+        }
+
+        // 删除角色权限关联
+        rolePermissionMapper.deleteByRoleId(roleId);
+
+        // 删除用户角色关联
+        userRoleMapper.deleteByRoleId(roleId);
+
+        // 逻辑删除角色
+        role.setDeleted(1);
+        role.setUpdateTime(LocalDateTime.now());
+        return updateById(role);
+    }
+
+    @Override
+    public boolean updateRoleStatus(Long roleId, Integer status) {
+        if (roleId == null || status == null) {
+            return false;
+        }
+
+        SysRole role = getById(roleId);
+        if (role == null) {
+            return false;
+        }
+
+        role.setStatus(status);
+        role.setUpdateTime(LocalDateTime.now());
+        return updateById(role);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean assignPermissions(Long roleId, List<Long> permissionIds) {
+        if (roleId == null) {
+            return false;
+        }
+
+        // 删除原有权限关联
+        rolePermissionMapper.deleteByRoleId(roleId);
+
+        // 添加新的权限关联
+        if (permissionIds != null && !permissionIds.isEmpty()) {
+            List<SysRolePermission> rolePermissions = permissionIds.stream()
+                    .map(permissionId -> {
+                        SysRolePermission rolePermission = new SysRolePermission();
+                        rolePermission.setRoleId(roleId);
+                        rolePermission.setPermissionId(permissionId);
+                        rolePermission.setCreateTime(LocalDateTime.now());
+                        return rolePermission;
+                    })
+                    .collect(Collectors.toList());
+
+            return rolePermissionMapper.batchInsert(rolePermissions) > 0;
+        }
+
+        return true;
+    }
+
+    @Override
+    public List<String> getRolePermissions(Long roleId) {
+        if (roleId == null) {
+            return null;
+        }
+        return baseMapper.selectRolePermissions(roleId);
+    }
+
+    @Override
+    public List<SysRole> getUserRoles(Long userId) {
+        if (userId == null) {
+            return null;
+        }
+        return baseMapper.selectRolesByUserId(userId);
+    }
+
+    @Override
+    public List<SysRole> getEnabledRoles() {
+        LambdaQueryWrapper<SysRole> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(SysRole::getStatus, 1)
+                .eq(SysRole::getDeleted, 0)
+                .orderByAsc(SysRole::getCreateTime);
+        return list(wrapper);
+    }
+}
+
