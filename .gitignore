@@ -3,6 +3,7 @@ bin-debug/
 bin-release/
 [Oo]bj/
 [Bb]in/
+<<<<<<< HEAD
 target/
 build/
 out/
@@ -18,12 +19,18 @@ out/
 
 # 说明：Eclipse 相关配置（.settings、.classpath、.project、启动配置）
 
+=======
+
+# Other files and folders
+.settings/
+>>>>>>> 929bbdf034a3dde539b2e31e9b6affe3c018ea68
 
 # Executables
 *.swf
 *.air
 *.ipa
 *.apk
+<<<<<<< HEAD
 *.jar
 *.war
 *.ear
