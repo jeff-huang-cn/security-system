@@ -46,7 +46,8 @@ public class JwkSetController {
             List<JWK> jwks = new ArrayList<>();
             for (OAuth2Jwk jwk : activeJwks) {
                 RSAKey rsaKey = jwkService.toRSAKey(jwk);
-                // 只包含公钥信�?                jwks.add(rsaKey.toPublicJWK());
+                // 只包含公钥信
+                jwks.add(rsaKey.toPublicJWK());
             }
             
             JWKSet jwkSet = new JWKSet(jwks);

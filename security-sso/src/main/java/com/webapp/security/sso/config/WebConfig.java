@@ -2,7 +2,12 @@ package com.webapp.security.sso.config;
 
 import com.webapp.security.sso.interceptor.ClientIdInterceptor;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -18,8 +23,32 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(clientIdInterceptor)
-                .addPathPatterns("/oauth2/**")  // 只对OAuth2认证接口生效
-                .excludePathPatterns("/oauth2/health");  // 排除健康检查接口
+                .addPathPatterns("/login", "/logout", "/refresh", "/oauth2/**") // 包含认证相关接口
+                .excludePathPatterns("/oauth2/health"); // 排除健康检查接口
+    }
+
+    // @Override
+    // public void addCorsMappings(CorsRegistry registry) {
+    // registry.addMapping("/**")
+    // .allowedOrigins("*")
+    // .allowedMethods("*")
+    // .allowedHeaders("*")
+    // .allowCredentials(true)
+    // .maxAge(3600);
+    // }
+
+    @Bean
+    public CorsFilter corsFilter() {
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        CorsConfiguration config = new CorsConfiguration();
+
+        config.addAllowedOriginPattern("*"); // 允许所有源
+        config.addAllowedHeader("*"); // 允许所有头部
+        config.addAllowedMethod("*"); // 允许所有方法
+        config.setAllowCredentials(true); // 允许携带认证信息
+        config.setMaxAge(3600L); // 预检请求缓存时间
+
+        source.registerCorsConfiguration("/**", config);
+        return new CorsFilter(source);
     }
 }
-

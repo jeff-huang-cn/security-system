@@ -70,7 +70,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             <UserOutlined />
           </div>
           <Title level={2} style={{ margin: 0, color: '#1f2937' }}>
-            权限管理系统
+            权限管理系统 🔥
           </Title>
           <Text type="secondary">
             请输入您的账号和密码登录

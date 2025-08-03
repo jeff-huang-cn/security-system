@@ -6,20 +6,21 @@ import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
  * 
  * 用途：专门处理认证相关的请求（登录、登出、刷新token等）
  * 特点：
- * 1. 不包含token自动刷新逻辑，避免循环依赖
- * 2. 用于token刷新时调用后端接口
+ * 1. 直接对接SSO服务进行用户认证
+ * 2. 不包含token自动刷新逻辑，避免循环依赖
  * 3. 标记请求为_isAuthApi=true，让业务API实例识别并跳过token刷新
  */
 export const authApi: AxiosInstance = axios.create({
-  baseURL: process.env.REACT_APP_AUTH_API_URL || 'http://localhost:9001',
+  baseURL: process.env.REACT_APP_AUTH_BASE_URL || 'http://localhost:9000',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
+    'X-Client-Id': 'webapp-client'  // SSO服务需要的客户端ID
   },
 });
 
 // 为authApi的请求添加标识，避免触发token刷新逻辑
-authApi.interceptors.request.use((config) => {
+authApi.interceptors.request.use((config: any) => {
   config._isAuthApi = true;  // 标记为认证API请求
   return config;
 });
@@ -35,7 +36,7 @@ authApi.interceptors.request.use((config) => {
  * 4. 支持请求队列和并发控制
  */
 export const businessApi: AxiosInstance = axios.create({
-  baseURL: process.env.REACT_APP_BUSINESS_API_URL || 'http://localhost:9002',
+  baseURL: process.env.REACT_APP_API_BASE_URL || 'http://localhost:9001',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -91,7 +92,7 @@ const processQueue = (error: any, token: string | null = null) => {
  * 
  * 执行流程：
  * 1. 从localStorage获取refresh_token
- * 2. 调用后端的/api/refresh接口
+ * 2. 直接调用SSO服务的/refresh接口
  * 3. 更新localStorage中的access_token和refresh_token
  * 4. 返回新的access_token供后续请求使用
  * 
@@ -104,9 +105,9 @@ const refreshToken = async (): Promise<string> => {
   }
 
   try {
-    // 使用authApi避免触发拦截器的token刷新逻辑
-    const response = await authApi.post('/api/refresh', {
-      refresh_token: refreshToken
+    // 使用authApi直接调用SSO服务避免触发拦截器的token刷新逻辑
+    const response = await authApi.post('/oauth2/refresh', {
+      refreshToken: refreshToken
     });
     
     const { access_token, refresh_token: newRefreshToken } = response.data;

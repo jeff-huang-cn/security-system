@@ -44,6 +44,8 @@ import org.springframework.security.oauth2.server.authorization.token.Delegating
 import org.springframework.security.oauth2.server.authorization.token.JwtGenerator;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2RefreshTokenGenerator;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenGenerator;
+import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
+import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
@@ -75,7 +77,7 @@ public class SecurityConfig {
                 .oidc(Customizer.withDefaults()); // 启用OpenID Connect 1.0
 
         http
-                // 重定向到登录页面，当未认证的用户尝试访问受保护的端点时                
+                // 重定向到登录页面，当未认证的用户尝试访问受保护的端点时
                 .exceptionHandling((exceptions) -> exceptions
                         .defaultAuthenticationEntryPointFor(
                                 new LoginUrlAuthenticationEntryPoint("/login"),
@@ -173,10 +175,15 @@ public class SecurityConfig {
      * OAuth2令牌生成器
      */
     @Bean
-    public OAuth2TokenGenerator<?> tokenGenerator(JwtEncoder jwtEncoder) {
+    public OAuth2TokenGenerator<?> tokenGenerator(JwtEncoder jwtEncoder,
+            OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer) {
         JwtGenerator jwtGenerator = new JwtGenerator(jwtEncoder);
+        // 注册JWT自定义器，确保权限添加到JWT中
+        jwtGenerator.setJwtCustomizer(jwtCustomizer);
+        log.info("JWT customizer registered with JwtGenerator");
+
         OAuth2RefreshTokenGenerator refreshTokenGenerator = new OAuth2RefreshTokenGenerator();
-        
+
         return new DelegatingOAuth2TokenGenerator(
                 jwtGenerator, refreshTokenGenerator);
     }
@@ -202,4 +209,3 @@ public class SecurityConfig {
                 .build();
     }
 }
-

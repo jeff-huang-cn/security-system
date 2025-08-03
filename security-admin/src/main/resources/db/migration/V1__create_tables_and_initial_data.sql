@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS sys_role_permission (
 
 -- 插入初始管理员用户
 INSERT INTO sys_user (username, password, real_name, email, status, create_by) VALUES 
-('admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVEFDi', '系统管理员', 'admin@example.com', 1, 'system');
+('admin', '$2a$10$x4/GrFOigkEPIqUO53M5VOGmQFmzVX.tIrHk5tW/5EdmnCZVEYEm2', '系统管理员', 'admin@example.com', 1, 'system');
 
 -- 插入初始角色
 INSERT INTO sys_role (role_code, role_name, description, status, create_by) VALUES 

@@ -1,6 +1,6 @@
 # 认证授权服务配置
 server:
-  port: 8080
+  port: 9000
   servlet:
     context-path: /
 
@@ -11,7 +11,7 @@ spring:
   # 数据库配置 - 使用环境变量
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: ${DB_URL:jdbc:mysql://localhost:3306/auth_system?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true}
+    url: ${DB_URL:jdbc:mysql://localhost:3306/admin?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true}
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:123456}
     type: com.alibaba.druid.pool.DruidDataSource

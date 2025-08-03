@@ -19,13 +19,13 @@ export const authService = {
    * @returns Promise<any> 登录响应数据
    * 
    * 执行流程：
-   * 1. 调用后端登录接口
+   * 1. 直接调用SSO服务的登录接口
    * 2. 获取access_token和refresh_token
    * 3. 将token保存到localStorage
    * 4. 返回完整的响应数据供组件使用
    */
   login: async (username: string, password: string) => {
-    const response = await authApi.post('/api/login', {
+    const response = await authApi.post('/oauth2/login', {
       username,
       password
     });
@@ -54,7 +54,7 @@ export const authService = {
    * 
    * 执行流程：
    * 1. 获取refresh_token（参数传入或从localStorage读取）
-   * 2. 调用后端刷新接口
+   * 2. 直接调用SSO服务的刷新接口
    * 3. 更新localStorage中的token
    * 4. 返回新的token信息
    * 
@@ -66,8 +66,8 @@ export const authService = {
       throw new Error('No refresh token available');
     }
 
-    const response = await authApi.post('/api/refresh', {
-      refresh_token: token
+    const response = await authApi.post('/oauth2/refresh', {
+      refreshToken: token
     });
 
     // 更新本地存储的token
@@ -84,21 +84,7 @@ export const authService = {
     return response.data;
   },
 
-  /**
-   * 获取当前用户信息
-   * 
-   * @returns Promise<any> 用户信息
-   * 
-   * 执行流程：
-   * 1. 调用后端获取当前用户接口
-   * 2. 返回用户详细信息
-   * 
-   * 注意：此接口会自动携带Authorization头，由api.ts的拦截器处理
-   */
-  getCurrentUser: async () => {
-    const response = await authApi.get('/api/user/current');
-    return response.data;
-  },
+
 
   /**
    * 用户登出
@@ -106,26 +92,26 @@ export const authService = {
    * @returns Promise<any> 登出响应数据
    * 
    * 执行流程：
-   * 1. 获取当前的refresh_token
-   * 2. 调用后端登出接口（传递refresh_token用于服务端注销）
+   * 1. 获取当前的access_token
+   * 2. 直接调用SSO服务的登出接口
    * 3. 清除本地存储的所有token
    * 4. 返回登出结果
    * 
    * 设计考虑：
-   * - 即使后端调用失败，也要清除本地token，确保前端状态正确
-   * - 传递refresh_token给后端，让服务端能够将其加入黑名单
+   * - 即使SSO登出失败，也要清除本地token，确保前端状态正确
+   * - 传递access_token给SSO服务，让服务端撤销相关授权
    */
   logout: async () => {
     try {
-      // 获取refresh_token用于服务端注销
-      const refreshToken = localStorage.getItem('refresh_token');
-      if (refreshToken) {
-        await authApi.post('/api/logout', {
-          refresh_token: refreshToken
+      // 获取access_token用于服务端注销
+      const accessToken = localStorage.getItem('access_token');
+      if (accessToken) {
+        await authApi.post('/oauth2/logout', {
+          accessToken: accessToken
         });
       }
     } catch (error) {
-      // 即使后端登出失败，也要清除本地token
+      // 即使SSO登出失败，也要清除本地token
       console.error('Logout API call failed:', error);
     } finally {
       // 清除本地存储的token
@@ -134,22 +120,7 @@ export const authService = {
     }
   },
 
-  /**
-   * 验证token有效性
-   * 
-   * @param token 要验证的token
-   * @returns Promise<any> 验证结果
-   * 
-   * 执行流程：
-   * 1. 调用后端token验证接口
-   * 2. 返回验证结果
-   * 
-   * 用途：可用于页面加载时验证用户登录状态
-   */
-  validateToken: async (token: string) => {
-    const response = await authApi.post('/api/validate', { token });
-    return response.data;
-  },
+
 
   // ===== 工具函数 =====
   

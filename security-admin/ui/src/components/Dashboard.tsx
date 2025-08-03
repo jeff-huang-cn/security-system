@@ -26,6 +26,7 @@ import {
 import UserManagement from './UserManagement';
 import RoleManagement from './RoleManagement';
 import PermissionManagement from './PermissionManagement';
+import { authService } from '../services/authService';
 
 const { Header, Sider, Content } = Layout;
 
@@ -48,11 +49,17 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     }
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    message.success('退出登录成功');
-    onLogout();
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+      onLogout();
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // 即使登出失败，也清除本地存储并跳转到登录页
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      onLogout();
+    }
   };
 
   const menuItems = [
@@ -191,47 +198,90 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Sider trigger={null} collapsible collapsed={collapsed} theme="dark">
+      <Sider 
+        trigger={null} 
+        collapsible 
+        collapsed={collapsed} 
+        theme="light" 
+        width={220}
+        style={{ boxShadow: '2px 0 8px 0 rgba(29,35,41,.05)' }}
+      >
+        {/* 系统Logo和名称 */}
         <div style={{ 
-          height: 32, 
-          margin: 16, 
-          background: 'rgba(255, 255, 255, 0.3)',
-          borderRadius: 6,
+          padding: collapsed ? '22px 0' : '16px',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          color: 'white',
-          fontWeight: 'bold'
+          justifyContent: collapsed ? 'center' : 'flex-start',
+          backgroundColor: '#ffffff',
+          height: 64,
+          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
+          margin: '0 0 1px 0'
         }}>
-          {collapsed ? 'AMS' : '权限管理系统'}
+          <div style={{ 
+            background: 'linear-gradient(135deg, #1890ff 0%, #722ed1 100%)', 
+            width: 36, 
+            height: 36, 
+            borderRadius: '8px', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            marginRight: collapsed ? 0 : 12
+          }}>
+            <SafetyOutlined style={{ color: 'white', fontSize: 20 }} />
+          </div>
+          {!collapsed && (
+            <div>
+              <div style={{ 
+                color: '#000000', 
+                fontSize: 16, 
+                fontWeight: 'bold', 
+                lineHeight: '20px',
+                letterSpacing: '0.5px'
+              }}>
+                安全权限系统
+              </div>
+              <div style={{ color: 'rgba(0,0,0,0.65)', fontSize: 12, marginTop: 2 }}>
+                Security Admin
+              </div>
+            </div>
+          )}
         </div>
+
         <Menu
-          theme="dark"
+          theme="light"
           mode="inline"
           selectedKeys={[selectedKey]}
           defaultOpenKeys={['system']}
           items={menuItems}
           onClick={({ key }) => setSelectedKey(key)}
+          style={{ 
+            borderRight: 0, 
+            padding: '8px 0',
+            fontSize: '14px'
+          }}
         />
       </Sider>
       
       <Layout>
         <Header style={{ 
-          padding: '0 16px', 
+          padding: '0 24px', 
           background: '#fff', 
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'space-between',
-          boxShadow: '0 1px 4px rgba(0,21,41,.08)'
+          boxShadow: '0 1px 4px rgba(0,21,41,.08)',
+          zIndex: 10,
+          position: 'sticky',
+          top: 0
         }}>
           <Space>
             <Button
               type="text"
               icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
               onClick={() => setCollapsed(!collapsed)}
-              style={{ fontSize: '16px', width: 64, height: 64 }}
+              style={{ fontSize: '16px' }}
             />
-            <Breadcrumb>
+            <Breadcrumb style={{ marginLeft: 12 }}>
               {getBreadcrumbItems().map((item, index) => (
                 <Breadcrumb.Item key={index}>{item}</Breadcrumb.Item>
               ))}
@@ -243,18 +293,32 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             placement="bottomRight"
           >
             <Space style={{ cursor: 'pointer' }}>
-              <Avatar icon={<UserOutlined />} />
-              <span>{userInfo?.username || '管理员'}</span>
+              <Avatar 
+                style={{ 
+                  backgroundColor: '#1890ff',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)'
+                }} 
+                icon={<UserOutlined />} 
+              />
+              <span style={{ fontSize: '14px' }}>{userInfo?.username || '管理员'}</span>
             </Space>
           </Dropdown>
         </Header>
         
         <Content style={{ 
-          margin: 0, 
-          minHeight: 280, 
+          margin: '16px', 
+          minHeight: 280,
           background: '#f0f2f5'
         }}>
-          {renderContent()}
+          <div style={{ 
+            padding: '24px', 
+            background: '#fff', 
+            borderRadius: '4px',
+            minHeight: 'calc(100vh - 140px)',
+            boxShadow: '0 1px 4px rgba(0,21,41,.08)'
+          }}>
+            {renderContent()}
+          </div>
         </Content>
       </Layout>
     </Layout>
