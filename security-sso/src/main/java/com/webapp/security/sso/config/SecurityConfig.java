@@ -158,9 +158,8 @@ public class SecurityConfig {
      * JWT解码器
      */
     @Bean
-    public JwtDecoder jwtDecoder(JWKSource<SecurityContext> jwkSource,
-            @Value("${oauth2.server.jwk-set-uri}") String jwkSetUri) {
-        return NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
+    public JwtDecoder jwtDecoder(@Value("${oauth2.server.base-url}") String baseUrl) {
+        return NimbusJwtDecoder.withJwkSetUri(baseUrl + "/oauth2/jwks").build();
     }
 
     /**
