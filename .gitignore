@@ -114,3 +114,4 @@ Desktop.ini
 test-output/
 surefire-reports/
 jacoco/
+node_modules/
