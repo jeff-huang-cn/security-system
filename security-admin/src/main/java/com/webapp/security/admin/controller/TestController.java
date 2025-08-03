@@ -1,6 +1,6 @@
 package com.webapp.security.admin.controller;
 
-import org.springframework.http.ResponseEntity;
+import com.webapp.security.core.model.ResponseResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -16,7 +16,7 @@ public class TestController {
      * 测试接口
      */
     @GetMapping("/hello")
-    public ResponseEntity<String> hello() {
-        return ResponseEntity.ok("Hello from Permission Admin!");
+    public ResponseResult<String> hello() {
+        return ResponseResult.success("Hello from Permission Admin!");
     }
 }

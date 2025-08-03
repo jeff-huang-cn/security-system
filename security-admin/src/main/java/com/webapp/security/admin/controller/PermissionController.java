@@ -1,9 +1,10 @@
 package com.webapp.security.admin.controller;
 
+import com.webapp.security.core.model.ErrorCode;
+import com.webapp.security.core.model.ResponseResult;
 import com.webapp.security.core.entity.SysPermission;
 import com.webapp.security.core.service.SysPermissionService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,9 +26,9 @@ public class PermissionController {
      */
     @GetMapping
     @PreAuthorize("hasAuthority('PERMISSION_QUERY')")
-    public ResponseEntity<List<SysPermission>> getAllPermissions() {
+    public ResponseResult<List<SysPermission>> getAllPermissions() {
         List<SysPermission> permissions = permissionService.list();
-        return ResponseEntity.ok(permissions);
+        return ResponseResult.success(permissions);
     }
 
     /**
@@ -35,9 +36,9 @@ public class PermissionController {
      */
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('PERMISSION_QUERY')")
-    public ResponseEntity<SysPermission> getPermissionById(@PathVariable Long id) {
+    public ResponseResult<SysPermission> getPermissionById(@PathVariable Long id) {
         SysPermission permission = permissionService.getById(id);
-        return permission != null ? ResponseEntity.ok(permission) : ResponseEntity.notFound().build();
+        return permission != null ? ResponseResult.success(permission) : ResponseResult.failed(ErrorCode.PERMISSION_NOT_FOUND);
     }
 
     /**
@@ -45,9 +46,9 @@ public class PermissionController {
      */
     @PostMapping
     @PreAuthorize("hasAuthority('PERMISSION_CREATE')")
-    public ResponseEntity<String> createPermission(@RequestBody SysPermission permission) {
+    public ResponseResult<Void> createPermission(@RequestBody SysPermission permission) {
         boolean success = permissionService.createPermission(permission);
-        return success ? ResponseEntity.ok("权限创建成功") : ResponseEntity.badRequest().body("权限创建失败");
+        return success ? ResponseResult.success(null, "权限创建成功") : ResponseResult.failed("权限创建失败");
     }
 
     /**
@@ -55,10 +56,10 @@ public class PermissionController {
      */
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('PERMISSION_UPDATE')")
-    public ResponseEntity<String> updatePermission(@PathVariable Long id, @RequestBody SysPermission permission) {
+    public ResponseResult<Void> updatePermission(@PathVariable Long id, @RequestBody SysPermission permission) {
         permission.setPermissionId(id);
         boolean success = permissionService.updatePermission(permission);
-        return success ? ResponseEntity.ok("权限更新成功") : ResponseEntity.badRequest().body("权限更新失败");
+        return success ? ResponseResult.success(null, "权限更新成功") : ResponseResult.failed("权限更新失败");
     }
 
     /**
@@ -66,19 +67,20 @@ public class PermissionController {
      */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('PERMISSION_DELETE')")
-    public ResponseEntity<String> deletePermission(@PathVariable Long id) {
+    public ResponseResult<Void> deletePermission(@PathVariable Long id) {
         boolean success = permissionService.deletePermission(id);
-        return success ? ResponseEntity.ok("权限删除成功") : ResponseEntity.badRequest().body("权限删除失败");
+        return success ? ResponseResult.success(null, "权限删除成功") : ResponseResult.failed("权限删除失败");
     }
 
     /**
      * 更新权限状态
      */
-    @PutMapping("/{id}/status")
+    @PatchMapping("/{id}/status")
     @PreAuthorize("hasAuthority('PERMISSION_UPDATE')")
-    public ResponseEntity<String> updatePermissionStatus(@PathVariable Long id, @RequestParam Integer status) {
-        boolean success = permissionService.updatePermissionStatus(id, status);
-        return success ? ResponseEntity.ok("权限状态更新成功") : ResponseEntity.badRequest().body("权限状态更新失败");
+    public ResponseResult<Void> updatePermissionStatus(@PathVariable Long id,
+            @RequestBody StatusRequest statusRequest) {
+        boolean success = permissionService.updatePermissionStatus(id, statusRequest.getStatus());
+        return success ? ResponseResult.success(null, "权限状态更新成功") : ResponseResult.failed("权限状态更新失败");
     }
 
     /**
@@ -86,9 +88,9 @@ public class PermissionController {
      */
     @GetMapping("/menu-tree")
     @PreAuthorize("hasAuthority('PERMISSION_QUERY')")
-    public ResponseEntity<List<SysPermission>> getMenuPermissions() {
+    public ResponseResult<List<SysPermission>> getMenuPermissions() {
         List<SysPermission> permissions = permissionService.getMenuPermissions();
-        return ResponseEntity.ok(permissions);
+        return ResponseResult.success(permissions);
     }
 
     /**
@@ -96,9 +98,9 @@ public class PermissionController {
      */
     @GetMapping("/{parentId}/children")
     @PreAuthorize("hasAuthority('PERMISSION_QUERY')")
-    public ResponseEntity<List<SysPermission>> getChildPermissions(@PathVariable Long parentId) {
+    public ResponseResult<List<SysPermission>> getChildPermissions(@PathVariable Long parentId) {
         List<SysPermission> permissions = permissionService.getChildPermissions(parentId);
-        return ResponseEntity.ok(permissions);
+        return ResponseResult.success(permissions);
     }
 
     /**
@@ -106,9 +108,23 @@ public class PermissionController {
      */
     @GetMapping("/enabled")
     @PreAuthorize("hasAuthority('PERMISSION_QUERY')")
-    public ResponseEntity<List<SysPermission>> getEnabledPermissions() {
+    public ResponseResult<List<SysPermission>> getEnabledPermissions() {
         List<SysPermission> permissions = permissionService.getEnabledPermissions();
-        return ResponseEntity.ok(permissions);
+        return ResponseResult.success(permissions);
+    }
+
+    /**
+     * 状态请求类
+     */
+    public static class StatusRequest {
+        private Integer status;
+
+        public Integer getStatus() {
+            return status;
+        }
+
+        public void setStatus(Integer status) {
+            this.status = status;
+        }
     }
 }
-

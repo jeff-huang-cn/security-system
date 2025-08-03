@@ -1,5 +1,6 @@
 package com.webapp.security.admin.controller;
 
+import com.webapp.security.core.model.ResponseResult;
 import com.webapp.security.core.entity.SysRole;
 import com.webapp.security.core.service.SysRoleService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,9 +26,9 @@ public class RoleController {
      */
     @GetMapping
     @PreAuthorize("hasAuthority('ROLE_QUERY')")
-    public ResponseEntity<List<SysRole>> getAllRoles() {
+    public ResponseResult<List<SysRole>> getAllRoles() {
         List<SysRole> roles = roleService.list();
-        return ResponseEntity.ok(roles);
+        return ResponseResult.success(roles);
     }
 
     /**
@@ -35,9 +36,9 @@ public class RoleController {
      */
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('ROLE_QUERY')")
-    public ResponseEntity<SysRole> getRoleById(@PathVariable Long id) {
+    public ResponseResult<SysRole> getRoleById(@PathVariable Long id) {
         SysRole role = roleService.getById(id);
-        return role != null ? ResponseEntity.ok(role) : ResponseEntity.notFound().build();
+        return role != null ? ResponseResult.success(role) : ResponseResult.failed("角色不存在");
     }
 
     /**
@@ -45,9 +46,9 @@ public class RoleController {
      */
     @PostMapping
     @PreAuthorize("hasAuthority('ROLE_CREATE')")
-    public ResponseEntity<String> createRole(@RequestBody SysRole role) {
+    public ResponseResult<Void> createRole(@RequestBody SysRole role) {
         boolean success = roleService.createRole(role);
-        return success ? ResponseEntity.ok("角色创建成功") : ResponseEntity.badRequest().body("角色创建失败");
+        return success ? ResponseResult.success(null, "角色创建成功") : ResponseResult.failed("角色创建失败");
     }
 
     /**
@@ -55,10 +56,10 @@ public class RoleController {
      */
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('ROLE_UPDATE')")
-    public ResponseEntity<String> updateRole(@PathVariable Long id, @RequestBody SysRole role) {
+    public ResponseResult<Void> updateRole(@PathVariable Long id, @RequestBody SysRole role) {
         role.setRoleId(id);
         boolean success = roleService.updateRole(role);
-        return success ? ResponseEntity.ok("角色更新成功") : ResponseEntity.badRequest().body("角色更新失败");
+        return success ? ResponseResult.success(null, "角色更新成功") : ResponseResult.failed("角色更新失败");
     }
 
     /**
@@ -66,19 +67,19 @@ public class RoleController {
      */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('ROLE_DELETE')")
-    public ResponseEntity<String> deleteRole(@PathVariable Long id) {
+    public ResponseResult<Void> deleteRole(@PathVariable Long id) {
         boolean success = roleService.deleteRole(id);
-        return success ? ResponseEntity.ok("角色删除成功") : ResponseEntity.badRequest().body("角色删除失败");
+        return success ? ResponseResult.success(null, "角色删除成功") : ResponseResult.failed("角色删除失败");
     }
 
     /**
      * 更新角色状态
      */
-    @PutMapping("/{id}/status")
+    @PatchMapping("/{id}/status")
     @PreAuthorize("hasAuthority('ROLE_UPDATE')")
-    public ResponseEntity<String> updateRoleStatus(@PathVariable Long id, @RequestParam Integer status) {
-        boolean success = roleService.updateRoleStatus(id, status);
-        return success ? ResponseEntity.ok("角色状态更新成功") : ResponseEntity.badRequest().body("角色状态更新失败");
+    public ResponseResult<Void> updateRoleStatus(@PathVariable Long id, @RequestBody StatusRequest statusRequest) {
+        boolean success = roleService.updateRoleStatus(id, statusRequest.getStatus());
+        return success ? ResponseResult.success(null, "角色状态更新成功") : ResponseResult.failed("角色状态更新失败");
     }
 
     /**
@@ -86,9 +87,9 @@ public class RoleController {
      */
     @PostMapping("/{id}/permissions")
     @PreAuthorize("hasAuthority('ROLE_UPDATE')")
-    public ResponseEntity<String> assignPermissions(@PathVariable Long id, @RequestBody List<Long> permissionIds) {
-        boolean success = roleService.assignPermissions(id, permissionIds);
-        return success ? ResponseEntity.ok("权限分配成功") : ResponseEntity.badRequest().body("权限分配失败");
+    public ResponseResult<Void> assignPermissions(@PathVariable Long id, @RequestBody PermissionIdsRequest request) {
+        boolean success = roleService.assignPermissions(id, request.getPermissionIds());
+        return success ? ResponseResult.success(null, "权限分配成功") : ResponseResult.failed("权限分配失败");
     }
 
     /**
@@ -96,9 +97,9 @@ public class RoleController {
      */
     @GetMapping("/{id}/permissions")
     @PreAuthorize("hasAuthority('ROLE_QUERY')")
-    public ResponseEntity<List<String>> getRolePermissions(@PathVariable Long id) {
+    public ResponseResult<List<String>> getRolePermissions(@PathVariable Long id) {
         List<String> permissions = roleService.getRolePermissions(id);
-        return ResponseEntity.ok(permissions);
+        return ResponseResult.success(permissions);
     }
 
     /**
@@ -106,9 +107,38 @@ public class RoleController {
      */
     @GetMapping("/enabled")
     @PreAuthorize("hasAuthority('ROLE_QUERY')")
-    public ResponseEntity<List<SysRole>> getEnabledRoles() {
+    public ResponseResult<List<SysRole>> getEnabledRoles() {
         List<SysRole> roles = roleService.getEnabledRoles();
-        return ResponseEntity.ok(roles);
+        return ResponseResult.success(roles);
+    }
+
+    /**
+     * 状态请求类
+     */
+    public static class StatusRequest {
+        private Integer status;
+
+        public Integer getStatus() {
+            return status;
+        }
+
+        public void setStatus(Integer status) {
+            this.status = status;
+        }
+    }
+
+    /**
+     * 权限ID请求类
+     */
+    public static class PermissionIdsRequest {
+        private List<Long> permissionIds;
+
+        public List<Long> getPermissionIds() {
+            return permissionIds;
+        }
+
+        public void setPermissionIds(List<Long> permissionIds) {
+            this.permissionIds = permissionIds;
+        }
     }
 }
-

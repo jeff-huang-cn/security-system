@@ -1,9 +1,9 @@
 package com.webapp.security.admin.controller;
 
+import com.webapp.security.core.model.ResponseResult;
 import com.webapp.security.core.entity.SysUser;
 import com.webapp.security.core.service.SysUserService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,9 +25,9 @@ public class UserController {
      */
     @GetMapping
     @PreAuthorize("hasAuthority('USER_QUERY')")
-    public ResponseEntity<List<SysUser>> getAllUsers() {
+    public ResponseResult<List<SysUser>> getAllUsers() {
         List<SysUser> users = userService.list();
-        return ResponseEntity.ok(users);
+        return ResponseResult.success(users);
     }
 
     /**
@@ -35,9 +35,9 @@ public class UserController {
      */
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('USER_QUERY')")
-    public ResponseEntity<SysUser> getUserById(@PathVariable Long id) {
+    public ResponseResult<SysUser> getUserById(@PathVariable Long id) {
         SysUser user = userService.getById(id);
-        return user != null ? ResponseEntity.ok(user) : ResponseEntity.notFound().build();
+        return user != null ? ResponseResult.success(user) : ResponseResult.failed("用户不存在");
     }
 
     /**
@@ -45,9 +45,9 @@ public class UserController {
      */
     @PostMapping
     @PreAuthorize("hasAuthority('USER_CREATE')")
-    public ResponseEntity<String> createUser(@RequestBody SysUser user) {
+    public ResponseResult<Void> createUser(@RequestBody SysUser user) {
         boolean success = userService.createUser(user);
-        return success ? ResponseEntity.ok("用户创建成功") : ResponseEntity.badRequest().body("用户创建失败");
+        return success ? ResponseResult.success(null, "用户创建成功") : ResponseResult.failed("用户创建失败");
     }
 
     /**
@@ -55,10 +55,10 @@ public class UserController {
      */
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('USER_UPDATE')")
-    public ResponseEntity<String> updateUser(@PathVariable Long id, @RequestBody SysUser user) {
+    public ResponseResult<Void> updateUser(@PathVariable Long id, @RequestBody SysUser user) {
         user.setUserId(id);
         boolean success = userService.updateUser(user);
-        return success ? ResponseEntity.ok("用户更新成功") : ResponseEntity.badRequest().body("用户更新失败");
+        return success ? ResponseResult.success(null, "用户更新成功") : ResponseResult.failed("用户更新失败");
     }
 
     /**
@@ -66,19 +66,19 @@ public class UserController {
      */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('USER_DELETE')")
-    public ResponseEntity<String> deleteUser(@PathVariable Long id) {
+    public ResponseResult<Void> deleteUser(@PathVariable Long id) {
         boolean success = userService.deleteUser(id);
-        return success ? ResponseEntity.ok("用户删除成功") : ResponseEntity.badRequest().body("用户删除失败");
+        return success ? ResponseResult.success(null, "用户删除成功") : ResponseResult.failed("用户删除失败");
     }
 
     /**
      * 更新用户状态
      */
-    @PutMapping("/{id}/status")
+    @PatchMapping("/{id}/status")
     @PreAuthorize("hasAuthority('USER_UPDATE')")
-    public ResponseEntity<String> updateUserStatus(@PathVariable Long id, @RequestParam Integer status) {
-        boolean success = userService.updateUserStatus(id, status);
-        return success ? ResponseEntity.ok("用户状态更新成功") : ResponseEntity.badRequest().body("用户状态更新失败");
+    public ResponseResult<Void> updateUserStatus(@PathVariable Long id, @RequestBody StatusRequest statusRequest) {
+        boolean success = userService.updateUserStatus(id, statusRequest.getStatus());
+        return success ? ResponseResult.success(null, "用户状态更新成功") : ResponseResult.failed("用户状态更新失败");
     }
 
     /**
@@ -86,9 +86,9 @@ public class UserController {
      */
     @PostMapping("/{id}/roles")
     @PreAuthorize("hasAuthority('USER_UPDATE')")
-    public ResponseEntity<String> assignRoles(@PathVariable Long id, @RequestBody List<Long> roleIds) {
-        boolean success = userService.assignRoles(id, roleIds);
-        return success ? ResponseEntity.ok("角色分配成功") : ResponseEntity.badRequest().body("角色分配失败");
+    public ResponseResult<Void> assignRoles(@PathVariable Long id, @RequestBody RoleIdsRequest request) {
+        boolean success = userService.assignRoles(id, request.getRoleIds());
+        return success ? ResponseResult.success(null, "角色分配成功") : ResponseResult.failed("角色分配失败");
     }
 
     /**
@@ -96,9 +96,9 @@ public class UserController {
      */
     @GetMapping("/{id}/permissions")
     @PreAuthorize("hasAuthority('USER_QUERY')")
-    public ResponseEntity<List<String>> getUserPermissions(@PathVariable Long id) {
+    public ResponseResult<List<String>> getUserPermissions(@PathVariable Long id) {
         List<String> permissions = userService.getUserPermissions(id);
-        return ResponseEntity.ok(permissions);
+        return ResponseResult.success(permissions);
     }
 
     /**
@@ -106,9 +106,38 @@ public class UserController {
      */
     @GetMapping("/{id}/roles")
     @PreAuthorize("hasAuthority('USER_QUERY')")
-    public ResponseEntity<List<String>> getUserRoles(@PathVariable Long id) {
+    public ResponseResult<List<String>> getUserRoles(@PathVariable Long id) {
         List<String> roles = userService.getUserRoles(id);
-        return ResponseEntity.ok(roles);
+        return ResponseResult.success(roles);
+    }
+
+    /**
+     * 状态请求类
+     */
+    public static class StatusRequest {
+        private Integer status;
+
+        public Integer getStatus() {
+            return status;
+        }
+
+        public void setStatus(Integer status) {
+            this.status = status;
+        }
+    }
+
+    /**
+     * 角色ID请求类
+     */
+    public static class RoleIdsRequest {
+        private List<Long> roleIds;
+
+        public List<Long> getRoleIds() {
+            return roleIds;
+        }
+
+        public void setRoleIds(List<Long> roleIds) {
+            this.roleIds = roleIds;
+        }
     }
 }
-
