@@ -49,7 +49,7 @@ let failedQueue: FailedRequest[] = []; // 失败请求队列
    - 如果未在刷新：启动刷新流程
 
 4. **Token刷新**
-   - 使用authApi调用 `/api/auth/refresh`
+   - 使用authApi调用 `/api/refresh`
    - 更新localStorage中的token
    - 处理队列中的所有请求
 
@@ -127,7 +127,7 @@ const processQueue = (error: any, token: string | null = null) => {
 
 ## 后端接口要求
 
-### 1. 登录接口 `/api/auth/login`
+### 1. 登录接口 `/api/login`
 **请求**：
 ```json
 {
@@ -148,7 +148,7 @@ const processQueue = (error: any, token: string | null = null) => {
 }
 ```
 
-### 2. 刷新接口 `/api/auth/refresh`
+### 2. 刷新接口 `/api/refresh`
 **请求**：
 ```json
 {
@@ -168,7 +168,7 @@ const processQueue = (error: any, token: string | null = null) => {
 }
 ```
 
-### 3. 登出接口 `/api/auth/logout`
+### 3. 登出接口 `/api/logout`
 **请求**：
 ```json
 {

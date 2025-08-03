@@ -26,7 +26,7 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .authorizeRequests(authz -> authz
-                .antMatchers("/", "/static/**", "/favicon.ico", "/api/auth/**").permitAll()
+                .antMatchers("/", "/static/**", "/favicon.ico", "/api/**").permitAll()
                 .anyRequest().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2

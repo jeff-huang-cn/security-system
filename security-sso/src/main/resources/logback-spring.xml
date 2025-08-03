@@ -109,8 +109,8 @@
         <appender-ref ref="CONSOLE"/>
     </logger>
     
-    <!-- OAuth2AuthController 日志 -->
-    <logger name="com.webapp.security.sso.controller.OAuth2AuthController" level="INFO" additivity="false">
+    <!-- OAuth2Controller 日志 -->
+    <logger name="com.webapp.security.sso.controller.OAuth2Controller" level="INFO" additivity="false">
         <appender-ref ref="FILE_SECURITY"/>
         <appender-ref ref="CONSOLE"/>
     </logger>

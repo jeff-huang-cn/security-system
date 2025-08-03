@@ -91,7 +91,7 @@ const processQueue = (error: any, token: string | null = null) => {
  * 
  * 执行流程：
  * 1. 从localStorage获取refresh_token
- * 2. 调用后端的/api/auth/refresh接口
+ * 2. 调用后端的/api/refresh接口
  * 3. 更新localStorage中的access_token和refresh_token
  * 4. 返回新的access_token供后续请求使用
  * 
@@ -105,7 +105,7 @@ const refreshToken = async (): Promise<string> => {
 
   try {
     // 使用authApi避免触发拦截器的token刷新逻辑
-    const response = await authApi.post('/api/auth/refresh', {
+    const response = await authApi.post('/api/refresh', {
       refresh_token: refreshToken
     });
     

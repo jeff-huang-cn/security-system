@@ -3,7 +3,7 @@
 ### clientId通过Header传递
 @baseUrl = http://localhost:8080
 ### 1. OAuth2登录测试 - 成功案例
-POST {{baseUrl}}/oauth2/auth/login
+POST {{baseUrl}}/oauth2/login
 Content-Type: application/json
 X-Client-Id: webapp-client
 
@@ -13,7 +13,7 @@ X-Client-Id: webapp-client
 }
 
 ### 2. OAuth2登录测试 - 错误用户名
-POST http://localhost:8080/oauth2/auth/login
+POST http://localhost:8080/oauth2/login
 Content-Type: application/json
 X-Client-Id: webapp-client
 
@@ -23,7 +23,7 @@ X-Client-Id: webapp-client
 }
 
 ### 3. OAuth2登录测试 - 错误密码
-POST http://localhost:8080/oauth2/auth/login
+POST http://localhost:8080/oauth2/login
 Content-Type: application/json
 X-Client-Id: webapp-client
 
@@ -33,7 +33,7 @@ X-Client-Id: webapp-client
 }
 
 ### 4. OAuth2登录测试 - 空用户名
-POST http://localhost:8080/oauth2/auth/login
+POST http://localhost:8080/oauth2/login
 Content-Type: application/json
 X-Client-Id: webapp-client
 
@@ -43,7 +43,7 @@ X-Client-Id: webapp-client
 }
 
 ### 5. OAuth2登录测试 - 空密码
-POST http://localhost:8080/oauth2/auth/login
+POST http://localhost:8080/oauth2/login
 Content-Type: application/json
 X-Client-Id: webapp-client
 
@@ -53,7 +53,7 @@ X-Client-Id: webapp-client
 }
 
 ### 6. OAuth2登录测试 - 缺少用户名字段
-POST http://localhost:8080/oauth2/auth/login
+POST http://localhost:8080/oauth2/login
 Content-Type: application/json
 X-Client-Id: webapp-client
 
@@ -62,7 +62,7 @@ X-Client-Id: webapp-client
 }
 
 ### 7. OAuth2登录测试 - 缺少密码字段
-POST http://localhost:8080/oauth2/auth/login
+POST http://localhost:8080/oauth2/login
 Content-Type: application/json
 X-Client-Id: webapp-client
 
@@ -71,7 +71,7 @@ X-Client-Id: webapp-client
 }
 
 ### 8. OAuth2登录测试 - 无效客户端ID
-POST http://localhost:8080/oauth2/auth/login
+POST http://localhost:8080/oauth2/login
 Content-Type: application/json
 X-Client-Id: invalid-client
 
@@ -81,7 +81,7 @@ X-Client-Id: invalid-client
 }
 
 ### 9. OAuth2登录测试 - 缺少客户端ID Header（使用默认值）
-POST http://localhost:8080/oauth2/auth/login
+POST http://localhost:8080/oauth2/login
 Content-Type: application/json
 
 {
@@ -91,7 +91,7 @@ Content-Type: application/json
 
 ### 10. OAuth2登出测试 - 成功案例
 # 先登录获取token，然后使用该token登出
-POST http://localhost:8080/oauth2/auth/logout
+POST http://localhost:8080/oauth2/logout
 Content-Type: application/json
 X-Client-Id: webapp-client
 
@@ -100,7 +100,7 @@ X-Client-Id: webapp-client
 }
 
 ### 11. OAuth2登出测试 - 无效token
-POST http://localhost:8080/oauth2/auth/logout
+POST http://localhost:8080/oauth2/logout
 Content-Type: application/json
 X-Client-Id: webapp-client
 
@@ -109,7 +109,7 @@ X-Client-Id: webapp-client
 }
 
 ### 12. OAuth2登出测试 - 空token
-POST http://localhost:8080/oauth2/auth/logout
+POST http://localhost:8080/oauth2/logout
 Content-Type: application/json
 X-Client-Id: webapp-client
 
@@ -118,7 +118,7 @@ X-Client-Id: webapp-client
 }
 
 ### 13. OAuth2刷新令牌测试 - 成功案例
-POST http://localhost:8080/oauth2/auth/refresh
+POST http://localhost:8080/oauth2/refresh
 Content-Type: application/json
 X-Client-Id: webapp-client
 
@@ -127,7 +127,7 @@ X-Client-Id: webapp-client
 }
 
 ### 14. OAuth2刷新令牌测试 - 无效refresh token
-POST http://localhost:8080/oauth2/auth/refresh
+POST http://localhost:8080/oauth2/refresh
 Content-Type: application/json
 X-Client-Id: webapp-client
 
@@ -136,7 +136,7 @@ X-Client-Id: webapp-client
 }
 
 ### 15. OAuth2登录测试 - SQL注入防护
-POST http://localhost:8080/oauth2/auth/login
+POST http://localhost:8080/oauth2/login
 Content-Type: application/json
 X-Client-Id: webapp-client
 
@@ -146,7 +146,7 @@ X-Client-Id: webapp-client
 }
 
 ### 16. OAuth2登录测试 - XSS防护
-POST http://localhost:8080/oauth2/auth/login
+POST http://localhost:8080/oauth2/login
 Content-Type: application/json
 X-Client-Id: webapp-client
 
@@ -156,7 +156,7 @@ X-Client-Id: webapp-client
 }
 
 ### 17. OAuth2登录测试 - 长字符串
-POST http://localhost:8080/oauth2/auth/login
+POST http://localhost:8080/oauth2/login
 Content-Type: application/json
 X-Client-Id: webapp-client
 
@@ -166,7 +166,7 @@ X-Client-Id: webapp-client
 }
 
 ### 18. OAuth2登录测试 - 特殊字符
-POST http://localhost:8080/oauth2/auth/login
+POST http://localhost:8080/oauth2/login
 Content-Type: application/json
 X-Client-Id: webapp-client
 
@@ -176,7 +176,7 @@ X-Client-Id: webapp-client
 }
 
 ### 19. OAuth2登录测试 - 中文用户名
-POST http://localhost:8080/oauth2/auth/login
+POST http://localhost:8080/oauth2/login
 Content-Type: application/json
 X-Client-Id: webapp-client
 
@@ -186,7 +186,7 @@ X-Client-Id: webapp-client
 }
 
 ### 20. OAuth2登录测试 - JSON格式错误
-POST http://localhost:8080/oauth2/auth/login
+POST http://localhost:8080/oauth2/login
 Content-Type: application/json
 X-Client-Id: webapp-client
 
@@ -196,19 +196,19 @@ X-Client-Id: webapp-client
 }
 
 ### 21. OAuth2登录测试 - 空请求体
-POST http://localhost:8080/oauth2/auth/login
+POST http://localhost:8080/oauth2/login
 Content-Type: application/json
 X-Client-Id: webapp-client
 
 ### 22. OAuth2登录测试 - 非JSON请求体
-POST http://localhost:8080/oauth2/auth/login
+POST http://localhost:8080/oauth2/login
 Content-Type: application/json
 X-Client-Id: webapp-client
 
 username=admin&password=password
 
 ### 23. OAuth2登录测试 - 错误Content-Type
-POST http://localhost:8080/oauth2/auth/login
+POST http://localhost:8080/oauth2/login
 Content-Type: text/plain
 X-Client-Id: webapp-client
 
@@ -218,7 +218,7 @@ X-Client-Id: webapp-client
 }
 
 ### 24. OAuth2登录测试 - 批量登录（压力测试）
-POST http://localhost:8080/oauth2/auth/login
+POST http://localhost:8080/oauth2/login
 Content-Type: application/json
 X-Client-Id: webapp-client
 
@@ -228,7 +228,7 @@ X-Client-Id: webapp-client
 }
 
 ### 25. OAuth2登录测试 - 连续登录
-POST http://localhost:8080/oauth2/auth/login
+POST http://localhost:8080/oauth2/login
 Content-Type: application/json
 X-Client-Id: webapp-client
 
@@ -238,7 +238,7 @@ X-Client-Id: webapp-client
 }
 
 ### 26. OAuth2登录测试 - 自定义Headers
-POST http://localhost:8080/oauth2/auth/login
+POST http://localhost:8080/oauth2/login
 Content-Type: application/json
 X-Client-Id: webapp-client
 User-Agent: OAuth2-Test-Client/1.0
@@ -250,7 +250,7 @@ X-Request-ID: test-12345
 }
 
 ### 27. OAuth2健康检查
-GET http://localhost:8080/oauth2/auth/health
+GET http://localhost:8080/oauth2/health
 
 ### 使用说明：
 # 1. 将 your_access_token_here 替换为实际的访问令牌

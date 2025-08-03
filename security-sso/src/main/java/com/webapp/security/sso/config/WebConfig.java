@@ -18,8 +18,8 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(clientIdInterceptor)
-                .addPathPatterns("/oauth2/auth/**")  // 只对OAuth2认证接口生效
-                .excludePathPatterns("/oauth2/auth/health");  // 排除健康检查接口
+                .addPathPatterns("/oauth2/**")  // 只对OAuth2认证接口生效
+                .excludePathPatterns("/oauth2/health");  // 排除健康检查接口
     }
 }
 

@@ -3,7 +3,7 @@
 @baseUrl = http://localhost:8080
 
 ### 1. 用户登录测试 - 成功案例
-POST {{baseUrl}}/auth/login
+POST {{baseUrl}}/login
 Content-Type: application/json
 
 {
@@ -12,7 +12,7 @@ Content-Type: application/json
 }
 
 ### 2. 用户登录测试 - 错误用户名
-POST {{baseUrl}}/auth/login
+POST {{baseUrl}}/login
 Content-Type: application/json
 
 {
@@ -21,7 +21,7 @@ Content-Type: application/json
 }
 
 ### 3. 用户登录测试 - 错误密码
-POST {{baseUrl}}/auth/login
+POST {{baseUrl}}/login
 Content-Type: application/json
 
 {
@@ -30,7 +30,7 @@ Content-Type: application/json
 }
 
 ### 4. 用户登录测试 - 空用户名
-POST {{baseUrl}}/auth/login
+POST {{baseUrl}}/login
 Content-Type: application/json
 
 {
@@ -39,7 +39,7 @@ Content-Type: application/json
 }
 
 ### 5. 用户登录测试 - 空密码
-POST {{baseUrl}}/auth/login
+POST {{baseUrl}}/login
 Content-Type: application/json
 
 {
@@ -48,7 +48,7 @@ Content-Type: application/json
 }
 
 ### 6. 用户登录测试 - 缺少字段
-POST {{baseUrl}}/auth/login
+POST {{baseUrl}}/login
 Content-Type: application/json
 
 {
@@ -56,16 +56,16 @@ Content-Type: application/json
 }
 
 ### 7. 用户登出测试
-POST {{baseUrl}}/auth/logout
+POST {{baseUrl}}/logout
 Content-Type: application/json
 
 ### 8. 使用JWT令牌的受保护端点测试（需要先登录获取token）
 ### 注意：将下面的 YOUR_JWT_TOKEN 替换为实际的JWT令牌
-GET {{baseUrl}}/auth/user/profile
+GET {{baseUrl}}/user/profile
 Authorization: Bearer YOUR_JWT_TOKEN
 
 ### 9. 批量测试 - 多个用户登录
-POST {{baseUrl}}/auth/login
+POST {{baseUrl}}/login
 Content-Type: application/json
 
 {
@@ -74,7 +74,7 @@ Content-Type: application/json
 }
 
 ###
-POST {{baseUrl}}/auth/login
+POST {{baseUrl}}/login
 Content-Type: application/json
 
 {
@@ -83,7 +83,7 @@ Content-Type: application/json
 }
 
 ### 10. 性能测试 - 连续登录
-POST {{baseUrl}}/auth/login
+POST {{baseUrl}}/login
 Content-Type: application/json
 
 {
@@ -92,10 +92,10 @@ Content-Type: application/json
 }
 
 ###
-POST {{baseUrl}}/auth/logout
+POST {{baseUrl}}/logout
 
 ###
-POST {{baseUrl}}/auth/login
+POST {{baseUrl}}/login
 Content-Type: application/json
 
 {
@@ -104,7 +104,7 @@ Content-Type: application/json
 }
 
 ### 11. 测试无效的Content-Type
-POST {{baseUrl}}/auth/login
+POST {{baseUrl}}/login
 Content-Type: text/plain
 
 {
@@ -113,7 +113,7 @@ Content-Type: text/plain
 }
 
 ### 12. 测试SQL注入防护
-POST {{baseUrl}}/auth/login
+POST {{baseUrl}}/login
 Content-Type: application/json
 
 {
@@ -122,7 +122,7 @@ Content-Type: application/json
 }
 
 ### 13. 测试XSS防护
-POST {{baseUrl}}/auth/login
+POST {{baseUrl}}/login
 Content-Type: application/json
 
 {
@@ -131,7 +131,7 @@ Content-Type: application/json
 }
 
 ### 14. 测试长字符串
-POST {{baseUrl}}/auth/login
+POST {{baseUrl}}/login
 Content-Type: application/json
 
 {
@@ -140,7 +140,7 @@ Content-Type: application/json
 }
 
 ### 15. 测试特殊字符
-POST {{baseUrl}}/auth/login
+POST {{baseUrl}}/login
 Content-Type: application/json
 
 {
@@ -149,7 +149,7 @@ Content-Type: application/json
 }
 
 ### 16. 测试中文用户名
-POST {{baseUrl}}/auth/login
+POST {{baseUrl}}/login
 Content-Type: application/json
 
 {
@@ -158,7 +158,7 @@ Content-Type: application/json
 }
 
 ### 17. 测试JSON格式错误
-POST {{baseUrl}}/auth/login
+POST {{baseUrl}}/login
 Content-Type: application/json
 
 {
@@ -167,11 +167,11 @@ Content-Type: application/json
 }
 
 ### 18. 测试空请求体
-POST {{baseUrl}}/auth/login
+POST {{baseUrl}}/login
 Content-Type: application/json
 
 ### 19. 测试非JSON请求体
-POST {{baseUrl}}/auth/login
+POST {{baseUrl}}/login
 Content-Type: application/json
 
 username=admin&password=123456

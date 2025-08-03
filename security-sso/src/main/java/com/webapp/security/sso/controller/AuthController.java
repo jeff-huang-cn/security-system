@@ -22,7 +22,7 @@ import java.util.Map;
  * 认证控制器
  */
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("")
 @RequiredArgsConstructor
 public class AuthController {
     

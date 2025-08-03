@@ -25,7 +25,7 @@ export const authService = {
    * 4. 返回完整的响应数据供组件使用
    */
   login: async (username: string, password: string) => {
-    const response = await authApi.post('/api/auth/login', {
+    const response = await authApi.post('/api/login', {
       username,
       password
     });
@@ -66,7 +66,7 @@ export const authService = {
       throw new Error('No refresh token available');
     }
 
-    const response = await authApi.post('/api/auth/refresh', {
+    const response = await authApi.post('/api/refresh', {
       refresh_token: token
     });
 
@@ -96,7 +96,7 @@ export const authService = {
    * 注意：此接口会自动携带Authorization头，由api.ts的拦截器处理
    */
   getCurrentUser: async () => {
-    const response = await authApi.get('/api/auth/user/current');
+    const response = await authApi.get('/api/user/current');
     return response.data;
   },
 
@@ -120,7 +120,7 @@ export const authService = {
       // 获取refresh_token用于服务端注销
       const refreshToken = localStorage.getItem('refresh_token');
       if (refreshToken) {
-        await authApi.post('/api/auth/logout', {
+        await authApi.post('/api/logout', {
           refresh_token: refreshToken
         });
       }
@@ -147,7 +147,7 @@ export const authService = {
    * 用途：可用于页面加载时验证用户登录状态
    */
   validateToken: async (token: string) => {
-    const response = await authApi.post('/api/auth/validate', { token });
+    const response = await authApi.post('/api/validate', { token });
     return response.data;
   },
 
