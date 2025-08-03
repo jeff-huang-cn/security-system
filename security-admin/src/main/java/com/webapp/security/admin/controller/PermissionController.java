@@ -38,7 +38,7 @@ public class PermissionController {
     @PreAuthorize("hasAuthority('PERMISSION_QUERY')")
     public ResponseResult<SysPermission> getPermissionById(@PathVariable Long id) {
         SysPermission permission = permissionService.getById(id);
-        return permission != null ? ResponseResult.success(permission) : ResponseResult.failed(ErrorCode.PERMISSION_NOT_FOUND);
+        return permission != null ? ResponseResult.success(permission) : ResponseResult.failed("权限不存在");
     }
 
     /**

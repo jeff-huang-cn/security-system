@@ -14,12 +14,12 @@ public class ResponseResult<T> implements Serializable {
     /**
      * 状态码
      */
-    private Integer code;
+    private Integer code = 200;
 
     /**
      * 消息
      */
-    private String message;
+    private String message = "操作成功";
 
     /**
      * 数据
@@ -40,11 +40,20 @@ public class ResponseResult<T> implements Serializable {
         this.data = data;
     }
 
+    public ResponseResult(String message, T data) {
+        this.message = message;
+        this.data = data;
+    }
+
+    public ResponseResult(T data) {
+        this.data = data;
+    }
+
     /**
      * 成功返回结果
      */
     public static <T> ResponseResult<T> success() {
-        return new ResponseResult<>(ErrorCode.SUCCESS.getCode(), ErrorCode.SUCCESS.getMessage());
+        return new ResponseResult<>();
     }
 
     /**
@@ -53,7 +62,7 @@ public class ResponseResult<T> implements Serializable {
      * @param data 获取的数据
      */
     public static <T> ResponseResult<T> success(T data) {
-        return new ResponseResult<>(ErrorCode.SUCCESS.getCode(), ErrorCode.SUCCESS.getMessage(), data);
+        return new ResponseResult<>(data);
     }
 
     /**
@@ -63,29 +72,19 @@ public class ResponseResult<T> implements Serializable {
      * @param message 提示信息
      */
     public static <T> ResponseResult<T> success(T data, String message) {
-        return new ResponseResult<>(ErrorCode.SUCCESS.getCode(), message, data);
+        return new ResponseResult<>(message, data);
     }
 
     /**
      * 失败返回结果
      */
     public static <T> ResponseResult<T> failed() {
-        return new ResponseResult<>(ErrorCode.OPERATION_FAILED.getCode(),
-                ErrorCode.OPERATION_FAILED.getMessage());
+        return new ResponseResult<>(50000, "操作失败");
     }
 
     /**
      * 失败返回结果
-     * 
-     * @param errorCode 错误码
-     */
-    public static <T> ResponseResult<T> failed(ErrorCode errorCode) {
-        return new ResponseResult<>(errorCode.getCode(), errorCode.getMessage());
-    }
-
-    /**
-     * 失败返回结果
-     * 
+     *
      * @param code    状态码
      * @param message 提示信息
      */
@@ -99,7 +98,7 @@ public class ResponseResult<T> implements Serializable {
      * @param message 提示信息
      */
     public static <T> ResponseResult<T> failed(String message) {
-        return new ResponseResult<>(ErrorCode.OPERATION_FAILED.getCode(), message);
+        return new ResponseResult<>(50000, message);
     }
 
     public Integer getCode() {
