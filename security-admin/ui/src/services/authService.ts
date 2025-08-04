@@ -47,6 +47,8 @@ export const authService = {
     // 使用TokenManager保存token信息
     if (access_token) {
       TokenManager.saveTokens(access_token, refresh_token, expires_in);
+    } else {
+      console.error('Login response missing access_token');
     }
 
     return response.data;
@@ -67,34 +69,44 @@ export const authService = {
    * 注意：此函数主要供api.ts中的自动刷新机制调用
    */
   refreshToken: async (refreshToken?: string) => {
-    const token = refreshToken || TokenManager.getRefreshToken();
-    if (!token) {
-      throw new Error('No refresh token available');
-    }
+    try {
+      const token = refreshToken || TokenManager.getRefreshToken();
+      if (!token) {
+        throw new Error('No refresh token available');
+      }
 
-    const response = await authApi.post('/oauth2/refresh', {
-      refreshToken: token
-    });
+      console.log('Attempting to refresh token with refresh_token');
+      const response = await authApi.post('/oauth2/refresh', {
+        refreshToken: token
+      });
 
-    console.log('Refresh response:', response.data);
+      console.log('Refresh response:', response.data);
 
-    // 更新本地存储的token
-    const { access_token, refresh_token: newRefreshToken } = response.data;
-    
-    // 解析过期时间，确保它是一个数字
-    let expires_in = response.data.expires_in;
-    if (typeof expires_in === 'string') {
-      expires_in = parseInt(expires_in, 10);
-    }
-    
-    console.log('Token expires in:', expires_in, 'seconds');
-    
-    // 使用TokenManager保存token信息
-    if (access_token) {
+      // 更新本地存储的token
+      const { access_token, refresh_token: newRefreshToken } = response.data;
+      
+      if (!access_token) {
+        throw new Error('Refresh response missing access_token');
+      }
+      
+      // 解析过期时间，确保它是一个数字
+      let expires_in = response.data.expires_in;
+      if (typeof expires_in === 'string') {
+        expires_in = parseInt(expires_in, 10);
+      }
+      
+      console.log('New token expires in:', expires_in, 'seconds');
+      
+      // 使用TokenManager保存token信息
       TokenManager.saveTokens(access_token, newRefreshToken, expires_in);
-    }
 
-    return response.data;
+      return response.data;
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      // 刷新失败，清除token避免继续使用无效token
+      TokenManager.clearTokens();
+      throw error; // 重新抛出错误，让调用者处理
+    }
   },
 
 

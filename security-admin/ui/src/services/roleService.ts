@@ -15,8 +15,14 @@ export const roleService = {
     if (keyword) {
       (params as any).keyword = keyword;
     }
-    const response = await businessApi.get('/api/roles', { params });
-    return response.data;
+    return await businessApi.post('/api/roles/paged', { params });
+  },
+
+  /**
+   * 获取所有角色（不分页）
+   */
+  getAllRoles: async () => {
+    return await businessApi.get('/api/roles/all');
   },
 
   /**
@@ -24,8 +30,7 @@ export const roleService = {
    * @param id 角色ID
    */
   getRoleById: async (id: number) => {
-    const response = await businessApi.get(`/api/roles/${id}`);
-    return response.data;
+    return await businessApi.get(`/api/roles/${id}`);
   },
 
   /**
@@ -33,8 +38,7 @@ export const roleService = {
    * @param role 角色信息
    */
   createRole: async (role: any) => {
-    const response = await businessApi.post('/api/roles', role);
-    return response.data;
+    return await businessApi.post('/api/roles', role);
   },
 
   /**
@@ -43,8 +47,7 @@ export const roleService = {
    * @param role 角色信息
    */
   updateRole: async (id: number, role: any) => {
-    const response = await businessApi.put(`/api/roles/${id}`, role);
-    return response.data;
+    return await businessApi.put(`/api/roles/${id}`, role);
   },
 
   /**
@@ -52,8 +55,7 @@ export const roleService = {
    * @param id 角色ID
    */
   deleteRole: async (id: number) => {
-    const response = await businessApi.delete(`/api/roles/${id}`);
-    return response.data;
+    return await businessApi.delete(`/api/roles/${id}`);
   },
 
   /**
@@ -62,8 +64,7 @@ export const roleService = {
    * @param status 状态（1启用，0禁用）
    */
   toggleRoleStatus: async (id: number, status: number) => {
-    const response = await businessApi.patch(`/api/roles/${id}/status`, { status });
-    return response.data;
+    return await businessApi.patch(`/api/roles/${id}/status`, { status });
   },
 
   /**
@@ -71,8 +72,7 @@ export const roleService = {
    * @param roleId 角色ID
    */
   getRolePermissions: async (roleId: number) => {
-    const response = await businessApi.get(`/api/roles/${roleId}/permissions`);
-    return response.data;
+    return await businessApi.get(`/api/roles/${roleId}/permissions`);
   },
 
   /**
@@ -81,8 +81,7 @@ export const roleService = {
    * @param permissionIds 权限ID列表
    */
   assignRolePermissions: async (roleId: number, permissionIds: number[]) => {
-    const response = await businessApi.post(`/api/roles/${roleId}/permissions`, { permissionIds });
-    return response.data;
+    return await businessApi.post(`/api/roles/${roleId}/permissions`, { permissionIds });
   },
 
   /**
@@ -90,7 +89,6 @@ export const roleService = {
    * @param roleId 角色ID
    */
   checkRoleUsage: async (roleId: number) => {
-    const response = await businessApi.get(`/api/roles/${roleId}/usage`);
-    return response.data;
+    return await businessApi.get(`/api/roles/${roleId}/usage`);
   }
 };

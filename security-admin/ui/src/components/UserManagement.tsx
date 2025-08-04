@@ -76,12 +76,40 @@ const UserManagement: React.FC = () => {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const response = await userService.getUsers(pagination.current, pagination.pageSize, searchKeyword);
-      setUsers(response.data || []);
-      setPagination(prev => ({
-        ...prev,
-        total: response.total || 0
-      }));
+      debugger
+      const result = await userService.getUsers(pagination.current, pagination.pageSize, searchKeyword);
+      // 处理返回结果，适应新的响应格式
+      if (result && typeof result === 'object') {
+        // 如果返回的是分页对象
+        if ('list' in result && 'total' in result) {
+          const userList: User[] = Array.isArray(result.list) ? result.list : [];
+          setUsers(userList);
+          setPagination(prev => ({
+            ...prev,
+            total: typeof result.total === 'number' ? result.total : 0
+          }));
+        } 
+        // 如果返回的是数组
+        else if (Array.isArray(result)) {
+          setUsers(result as User[]);
+          setPagination(prev => ({
+            ...prev,
+            total: result.length
+          }));
+        } else {
+          setUsers([]);
+          setPagination(prev => ({
+            ...prev,
+            total: 0
+          }));
+        }
+      } else {
+        setUsers([]);
+        setPagination(prev => ({
+          ...prev,
+          total: 0
+        }));
+      }
     } catch (error) {
       message.error('加载用户列表失败');
       console.error('加载用户列表失败:', error);
@@ -92,8 +120,11 @@ const UserManagement: React.FC = () => {
 
   const loadRoles = async () => {
     try {
-      const response = await roleService.getRoles(1, 100);
-      setRoles(response.data || []);
+      // 使用新的 getAllRoles 方法获取所有角色
+      const result = await roleService.getAllRoles();
+      // 确保结果是数组，并进行类型转换
+      const rolesList: Role[] = Array.isArray(result) ? result : [];
+      setRoles(rolesList);
     } catch (error) {
       message.error('加载角色列表失败');
       console.error('加载角色列表失败:', error);
@@ -151,7 +182,12 @@ const UserManagement: React.FC = () => {
 
   const handleToggleStatus = async (userId: number, status: number) => {
     try {
-      await userService.toggleUserStatus(userId, status === 1 ? 0 : 1);
+      // 计算新状态：如果当前是 1 (启用)，则变为 0 (禁用)，反之亦然
+      const newStatus = status === 1 ? 0 : 1;
+      console.log(`Toggling user ${userId} status from ${status} to ${newStatus}`);
+      
+      // 调用 API 更新用户状态
+      await userService.toggleUserStatus(userId, newStatus);
       message.success('用户状态更新成功');
       loadUsers();
     } catch (error) {
@@ -163,8 +199,37 @@ const UserManagement: React.FC = () => {
   const handleAssignRoles = async (userId: number) => {
     setCurrentUserId(userId);
     try {
+      // 获取用户信息，检查用户状态
+      const user = await userService.getUserById(userId);
+      if (user && user.status === 0) {
+        message.warning('禁用状态的用户不能分配角色，请先启用该用户');
+        return;
+      }
+      
+      // 获取用户当前角色
       const userRoles = await userService.getUserRoles(userId);
-      setSelectedRoles(userRoles.map((role: Role) => role.roleId));
+      // 处理返回的角色数据，确保是角色ID数组
+      let roleIds: number[] = [];
+      if (Array.isArray(userRoles)) {
+        // 如果返回的是对象数组，提取roleId
+        if (userRoles.length > 0 && typeof userRoles[0] === 'object' && 'roleId' in userRoles[0]) {
+          roleIds = userRoles.map((role: any) => role.roleId);
+        } 
+        // 如果返回的是ID数组，直接使用
+        else if (userRoles.length > 0 && typeof userRoles[0] === 'number') {
+          roleIds = userRoles as number[];
+        }
+        // 如果返回的是角色代码字符串数组，需要查找对应的角色ID
+        else if (userRoles.length > 0 && typeof userRoles[0] === 'string') {
+          // 假设roles已经加载，包含所有角色信息
+          const roleMap = new Map(roles.map(role => [role.roleCode, role.roleId]));
+          roleIds = userRoles
+            .map((roleCode: string) => roleMap.get(roleCode))
+            .filter((id): id is number => id !== undefined);
+        }
+      }
+      
+      setSelectedRoles(roleIds);
       setShowRoleModal(true);
     } catch (error) {
       message.error('获取用户角色失败');
@@ -273,6 +338,7 @@ const UserManagement: React.FC = () => {
             type="link"
             size="small"
             onClick={() => handleAssignRoles(record.userId)}
+            disabled={record.status === 0}
           >
             分配角色
           </Button>

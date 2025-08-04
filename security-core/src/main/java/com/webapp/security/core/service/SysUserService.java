@@ -11,7 +11,8 @@ import java.util.List;
 public interface SysUserService extends IService<SysUser> {
 
     /**
-     * 根据用户名查询用�?     */
+     * 根据用户名查询用
+     */
     SysUser getByUsername(String username);
 
     /**
@@ -20,7 +21,8 @@ public interface SysUserService extends IService<SysUser> {
     SysUser getByEmail(String email);
 
     /**
-     * 根据手机号查询用�?     */
+     * 根据手机号查询用
+     */
     SysUser getByPhone(String phone);
 
     /**

@@ -1,12 +1,18 @@
 package com.webapp.security.admin.controller.role;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.webapp.security.admin.controller.role.dto.PermissionIdsDTO;
 import com.webapp.security.admin.controller.role.dto.RoleCreateDTO;
 import com.webapp.security.admin.controller.role.dto.RoleUpdateDTO;
 import com.webapp.security.admin.controller.user.dto.StatusDTO;
 import com.webapp.security.admin.controller.role.vo.RoleVO;
+import com.webapp.security.admin.controller.user.vo.UserVO;
 import com.webapp.security.admin.converter.RoleConverter;
 import com.webapp.security.core.entity.SysRole;
+import com.webapp.security.core.entity.SysUser;
+import com.webapp.security.core.model.PagedDTO;
+import com.webapp.security.core.model.PagedResult;
 import com.webapp.security.core.model.ResponseResult;
 import com.webapp.security.core.service.SysRoleService;
 import lombok.RequiredArgsConstructor;
@@ -27,10 +33,22 @@ public class RoleController {
     private final SysRoleService roleService;
     private final RoleConverter roleConverter;
 
+    @PostMapping("/paged")
+    @PreAuthorize("hasAuthority('ROLE_QUERY')")
+    public ResponseResult<PagedResult<RoleVO>> findRolePaged(@RequestBody PagedDTO paged) {
+        Page<SysRole> page = new Page<>(paged.getPageNum(), paged.getPageSize());
+        Page<SysRole> pageResult = roleService.page(page, new LambdaQueryWrapper<SysRole>()
+                .like(SysRole::getRoleName, paged.getKeyword())
+                .or()
+                .like(SysRole::getRoleCode, paged.getKeyword()));
+        List<RoleVO> voList = roleConverter.toVOList(pageResult.getRecords());
+        return ResponseResult.success(new PagedResult<>(voList, pageResult.getTotal()));
+    }
+
     /**
      * 获取所有角色
      */
-    @GetMapping
+    @GetMapping("/all")
     @PreAuthorize("hasAuthority('ROLE_QUERY')")
     public ResponseResult<List<RoleVO>> getAllRoles() {
         List<SysRole> roles = roleService.list();

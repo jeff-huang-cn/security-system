@@ -74,20 +74,71 @@ const requestInterceptor = (config: any) => {
  * 2. 如果是401，清除本地token并跳转到登录页
  * 3. 其他错误正常返回，由调用方处理
  */
-const responseInterceptor = (response: any) => response;
+const responseInterceptor = (response: any) => {
+  // 检查HTTP状态码
+  if(response.status !== 200) {
+    const error = new Error(response.data?.message || `HTTP错误: ${response.status}`);
+    return Promise.reject(error);
+  }
+
+  // 检查响应数据中的code字段
+  if (response.data && typeof response.data === 'object') {
+    // 检查是否有code字段
+    if ('code' in response.data) {
+      if (response.data.code !== 'success') {
+        // 如果code不是success，抛出业务逻辑错误
+        const error = new Error(response.data.message || '操作失败');
+        // 添加额外信息以便区分业务逻辑错误
+        (error as any).isBusinessError = true;
+        (error as any).code = response.data.code;
+        return Promise.reject(error);
+      }
+      
+      // 成功情况下，直接返回data字段内容
+      return response.data.data;
+    }
+  }
+  
+  // 如果响应数据不符合预期格式，直接返回原始响应数据
+  return response.data;
+};
 
 const responseErrorInterceptor = async (error: any) => {
-  // 处理401错误
-  if (error.response?.status === 401) {
-    console.log('Unauthorized access detected (401), redirecting to login page');
+  // 处理HTTP错误
+  if (error.response) {
+    const { status } = error.response;
     
-    // 清除本地token
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('token_expiry');
-    
-    // 跳转到登录页
-    window.location.href = '/login';
+    // 处理401错误 - 未授权
+    if (status === 401) {
+      console.log('Unauthorized access detected (401), redirecting to login page');
+      
+      // 清除本地token
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('token_expiry');
+      
+      // 跳转到登录页
+      window.location.href = '/login';
+    } 
+    // 处理403错误 - 禁止访问
+    else if (status === 403) {
+      console.log('Access forbidden (403)');
+      // 可以显示无权限提示或跳转到无权限页面
+    }
+    // 处理404错误 - 资源不存在
+    else if (status === 404) {
+      console.log('Resource not found (404)');
+    }
+    // 处理500错误 - 服务器错误
+    else if (status >= 500) {
+      console.log('Server error:', status);
+    }
+  } else if (error.request) {
+    // 请求已发送但没有收到响应
+    console.log('No response received:', error.request);
+  } else {
+    // 请求配置出错
+    console.log('Request error:', error.message);
   }
 
   return Promise.reject(error);

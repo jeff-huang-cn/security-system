@@ -16,12 +16,16 @@ export class TokenRefresher {
     // 清除可能存在的旧定时器
     this.stopRefreshCycle();
     
+    // 立即检查一次token状态
+    this.checkAndRefreshTokenIfNeeded();
+    
     // 设置下一次刷新时间
     this.scheduleNextRefresh();
     
     // 当页面从后台恢复时重新计算刷新时间
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
+        this.checkAndRefreshTokenIfNeeded();
         this.scheduleNextRefresh();
       }
     });
@@ -37,6 +41,30 @@ export class TokenRefresher {
       clearTimeout(this.refreshTimeout);
       this.refreshTimeout = null;
       console.log('Token refresh cycle stopped');
+    }
+  }
+
+  /**
+   * 立即检查并在需要时刷新token
+   */
+  static async checkAndRefreshTokenIfNeeded(): Promise<void> {
+    if (!authService.isAuthenticated()) {
+      return;
+    }
+
+    // 获取token剩余有效时间
+    const remainingTime = TokenManager.getTokenRemainingTime();
+    
+    // 如果剩余时间小于缓冲区，立即刷新
+    if (remainingTime <= this.EXPIRY_BUFFER) {
+      console.log(`Token will expire soon (${Math.round(remainingTime / 1000)}s remaining), refreshing now...`);
+      try {
+        await this.refreshToken();
+      } catch (error) {
+        console.error('Failed to refresh token during immediate check:', error);
+      }
+    } else {
+      console.log(`Token still valid for ${Math.round(remainingTime / 1000)}s, no need to refresh yet`);
     }
   }
   
@@ -55,6 +83,7 @@ export class TokenRefresher {
     
     // 获取token剩余有效时间
     const remainingTime = TokenManager.getTokenRemainingTime();
+    console.log(`Current token remaining time: ${Math.round(remainingTime / 1000)} seconds`);
     
     // 如果无法获取有效时间或时间为0，使用默认值（30分钟）
     const defaultExpiryTime = 30 * 60 * 1000; // 30分钟

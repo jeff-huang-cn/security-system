@@ -1,12 +1,13 @@
 package com.webapp.security.admin.controller.user;
 
-import com.webapp.security.admin.controller.user.dto.RoleIdsDTO;
-import com.webapp.security.admin.controller.user.dto.StatusDTO;
-import com.webapp.security.admin.controller.user.dto.UserCreateDTO;
-import com.webapp.security.admin.controller.user.dto.UserUpdateDTO;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.webapp.security.admin.controller.user.dto.*;
 import com.webapp.security.admin.controller.user.vo.UserVO;
 import com.webapp.security.admin.converter.UserConverter;
 import com.webapp.security.core.entity.SysUser;
+import com.webapp.security.core.model.PagedDTO;
+import com.webapp.security.core.model.PagedResult;
 import com.webapp.security.core.model.ResponseResult;
 import com.webapp.security.core.service.SysUserService;
 import lombok.RequiredArgsConstructor;
@@ -27,10 +28,22 @@ public class UserController {
     private final SysUserService userService;
     private final UserConverter userConverter;
 
+    @PostMapping("/paged")
+    @PreAuthorize("hasAuthority('USER_QUERY')")
+    public ResponseResult<PagedResult<UserVO>> findUserPaged(@RequestBody PagedDTO paged) {
+        Page<SysUser> page = new Page<>(paged.getPageNum(), paged.getPageSize());
+        Page<SysUser> pageResult = userService.page(page, new LambdaQueryWrapper<SysUser>()
+                .like(SysUser::getUsername, paged.getKeyword())
+                .or()
+                .like(SysUser::getRealName, paged.getKeyword()));
+        List<UserVO> voList = userConverter.toVOList(pageResult.getRecords());
+        return ResponseResult.success(new PagedResult<>(voList, pageResult.getTotal()));
+    }
+
     /**
      * 获取所有用户
      */
-    @GetMapping
+    @GetMapping("/all")
     @PreAuthorize("hasAuthority('USER_QUERY')")
     public ResponseResult<List<UserVO>> getAllUsers() {
         List<SysUser> users = userService.list();

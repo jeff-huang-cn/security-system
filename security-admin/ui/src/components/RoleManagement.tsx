@@ -81,12 +81,38 @@ const RoleManagement: React.FC = () => {
   const loadRoles = async () => {
     setLoading(true);
     try {
-      const response = await roleService.getRoles(pagination.current, pagination.pageSize, searchKeyword);
-      setRoles(response.data || []);
-      setPagination(prev => ({
-        ...prev,
-        total: response.total || 0
-      }));
+      const result = await roleService.getRoles(pagination.current, pagination.pageSize, searchKeyword);
+      // 处理返回结果，适应新的响应格式
+      if (result && typeof result === 'object') {
+        // 如果返回的是分页对象
+        if ('list' in result && 'total' in result) {
+          setRoles(Array.isArray(result.list) ? result.list : []);
+          setPagination(prev => ({
+            ...prev,
+            total: typeof result.total === 'number' ? result.total : 0
+          }));
+        } 
+        // 如果返回的是数组
+        else if (Array.isArray(result)) {
+          setRoles(result);
+          setPagination(prev => ({
+            ...prev,
+            total: result.length
+          }));
+        } else {
+          setRoles([]);
+          setPagination(prev => ({
+            ...prev,
+            total: 0
+          }));
+        }
+      } else {
+        setRoles([]);
+        setPagination(prev => ({
+          ...prev,
+          total: 0
+        }));
+      }
     } catch (error) {
       message.error('加载角色列表失败');
       console.error('加载角色列表失败:', error);
@@ -97,12 +123,14 @@ const RoleManagement: React.FC = () => {
 
   const loadPermissions = async () => {
     try {
-      const response = await permissionService.getPermissions(1, 1000);
-      const permissionList = response.data || [];
-      setPermissions(permissionList);
+      // 使用新的 getAllPermissions 方法获取所有权限
+      const permissionList = await permissionService.getAllPermissions();
+      // 确保结果是数组
+      const permissions: Permission[] = Array.isArray(permissionList) ? permissionList : [];
+      setPermissions(permissions);
       
       // 构建权限树
-      const tree = buildPermissionTree(permissionList);
+      const tree = buildPermissionTree(permissions);
       setPermissionTree(tree);
     } catch (error) {
       message.error('加载权限列表失败');
@@ -206,7 +234,9 @@ const RoleManagement: React.FC = () => {
     setCurrentRoleId(roleId);
     try {
       const rolePermissions = await roleService.getRolePermissions(roleId);
-      setSelectedPermissions(rolePermissions.map((permission: Permission) => permission.permissionId));
+      // 确保返回的是数组
+      const permissionsList: Permission[] = Array.isArray(rolePermissions) ? rolePermissions : [];
+      setSelectedPermissions(permissionsList.map(permission => permission.permissionId));
       setShowPermissionModal(true);
     } catch (error) {
       message.error('获取角色权限失败');

@@ -1,11 +1,17 @@
 package com.webapp.security.admin.controller.permission;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.webapp.security.admin.controller.permission.dto.PermissionCreateDTO;
 import com.webapp.security.admin.controller.permission.dto.PermissionUpdateDTO;
 import com.webapp.security.admin.controller.permission.vo.PermissionVO;
+import com.webapp.security.admin.controller.role.vo.RoleVO;
 import com.webapp.security.admin.controller.user.dto.StatusDTO;
 import com.webapp.security.admin.converter.PermissionConverter;
 import com.webapp.security.core.entity.SysPermission;
+import com.webapp.security.core.entity.SysRole;
+import com.webapp.security.core.model.PagedDTO;
+import com.webapp.security.core.model.PagedResult;
 import com.webapp.security.core.model.ResponseResult;
 import com.webapp.security.core.service.SysPermissionService;
 import lombok.RequiredArgsConstructor;
@@ -29,10 +35,22 @@ public class PermissionController {
     private final SysPermissionService permissionService;
     private final PermissionConverter permissionConverter;
 
+    @PostMapping("/paged")
+    @PreAuthorize("hasAuthority('PERMISSION_QUERY')")
+    public ResponseResult<PagedResult<PermissionVO>> findPermissionPaged(@RequestBody PagedDTO paged) {
+        Page<SysPermission> page = new Page<>(paged.getPageNum(), paged.getPageSize());
+        Page<SysPermission> pageResult = permissionService.page(page, new LambdaQueryWrapper<SysPermission>()
+                .like(SysPermission::getPermName, paged.getKeyword())
+                .or()
+                .like(SysPermission::getPermCode, paged.getKeyword()));
+        List<PermissionVO> voList = permissionConverter.toVOList(pageResult.getRecords());
+        return ResponseResult.success(new PagedResult<>(voList, pageResult.getTotal()));
+    }
+
     /**
      * 获取所有权限
      */
-    @GetMapping
+    @GetMapping("/all")
     @PreAuthorize("hasAuthority('PERMISSION_QUERY')")
     public ResponseResult<List<PermissionVO>> getAllPermissions() {
         List<SysPermission> permissions = permissionService.list();

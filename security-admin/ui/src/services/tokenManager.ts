@@ -21,14 +21,16 @@ export class TokenManager {
     }
     
     if (expiresIn && !isNaN(expiresIn)) {
-      const expiryTime = Date.now() + (expiresIn * 1000);
+      // 确保 expiresIn 是一个正数
+      const validExpiresIn = Math.max(0, expiresIn);
+      const expiryTime = Date.now() + (validExpiresIn * 1000);
       localStorage.setItem(this.TOKEN_EXPIRY_KEY, expiryTime.toString());
-      console.log(`Token will expire at: ${new Date(expiryTime).toLocaleString()}`);
+      console.log(`Token will expire at: ${new Date(expiryTime).toLocaleString()} (in ${validExpiresIn} seconds)`);
     } else {
       // 如果没有提供有效的过期时间，使用默认值（30分钟）
       const defaultExpiry = Date.now() + (30 * 60 * 1000);
       localStorage.setItem(this.TOKEN_EXPIRY_KEY, defaultExpiry.toString());
-      console.log(`Using default expiry time: ${new Date(defaultExpiry).toLocaleString()}`);
+      console.log(`Using default expiry time: ${new Date(defaultExpiry).toLocaleString()} (in 30 minutes)`);
     }
   }
 
@@ -63,7 +65,35 @@ export class TokenManager {
     const now = Date.now();
     const fiveMinutes = 5 * 60 * 1000; // 5分钟
     
-    return (expiry - now) <= fiveMinutes;
+    const isExpiring = (expiry - now) <= fiveMinutes;
+    if (isExpiring) {
+      console.log(`Token is expiring soon. Expires at: ${new Date(expiry).toLocaleString()}, now: ${new Date(now).toLocaleString()}`);
+    }
+    return isExpiring;
+  }
+
+  /**
+   * 检查token是否已过期
+   */
+  static isTokenExpired(): boolean {
+    const expiryTime = localStorage.getItem(this.TOKEN_EXPIRY_KEY);
+    if (!expiryTime) {
+      return true; // 如果没有过期时间，视为已过期
+    }
+    
+    const expiry = parseInt(expiryTime, 10);
+    if (isNaN(expiry)) {
+      return true; // 如果过期时间无效，视为已过期
+    }
+    
+    const now = Date.now();
+    const isExpired = now >= expiry;
+    
+    if (isExpired) {
+      console.log(`Token has expired. Expired at: ${new Date(expiry).toLocaleString()}, now: ${new Date(now).toLocaleString()}`);
+    }
+    
+    return isExpired;
   }
 
   /**
@@ -72,7 +102,12 @@ export class TokenManager {
   static isAuthenticated(): boolean {
     const accessToken = this.getAccessToken();
     const refreshToken = this.getRefreshToken();
-    return !!(accessToken && refreshToken);
+    
+    // 检查token是否存在且未过期
+    const hasTokens = !!(accessToken && refreshToken);
+    const notExpired = !this.isTokenExpired();
+    
+    return hasTokens && notExpired;
   }
 
   /**
@@ -82,6 +117,7 @@ export class TokenManager {
     localStorage.removeItem(this.ACCESS_TOKEN_KEY);
     localStorage.removeItem(this.REFRESH_TOKEN_KEY);
     localStorage.removeItem(this.TOKEN_EXPIRY_KEY);
+    console.log('All tokens cleared from localStorage');
   }
 
   /**
@@ -90,18 +126,20 @@ export class TokenManager {
   static getTokenRemainingTime(): number {
     const expiryTime = localStorage.getItem(this.TOKEN_EXPIRY_KEY);
     if (!expiryTime) {
+      console.log('No token expiry time found');
       return 0;
     }
     
     const expiry = parseInt(expiryTime, 10);
     if (isNaN(expiry)) {
+      console.log('Invalid token expiry time');
       return 0;
     }
     
     const now = Date.now();
     const remainingTime = Math.max(0, expiry - now);
     
-    console.log(`Token remaining time: ${Math.round(remainingTime / 1000)} seconds`);
+    console.log(`Token remaining time: ${Math.round(remainingTime / 1000)} seconds (expires at ${new Date(expiry).toLocaleString()})`);
     return remainingTime;
   }
 }

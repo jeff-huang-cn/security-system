@@ -63,8 +63,11 @@ const PermissionManagement: React.FC = () => {
   const loadPermissions = async () => {
     setLoading(true);
     try {
-      const response = await permissionService.getPermissions(1, 1000, searchKeyword);
-      const permissionList = response.data || [];
+      // 使用新的 getAllPermissions 方法获取所有权限
+      const result = await permissionService.getAllPermissions();
+      
+      // 确保结果是数组
+      const permissionList: Permission[] = Array.isArray(result) ? result : [];
       
       // 构建树形结构
       const tree = buildPermissionTree(permissionList);

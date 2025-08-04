@@ -15,8 +15,14 @@ export const permissionService = {
     if (keyword) {
       (params as any).keyword = keyword;
     }
-    const response = await businessApi.get('/api/permissions', { params });
-    return response.data;
+    return await businessApi.post('/api/permissions/paged', { params });
+  },
+
+  /**
+   * 获取所有权限（不分页）
+   */
+  getAllPermissions: async () => {
+    return await businessApi.get('/api/permissions/all');
   },
 
   /**
@@ -24,8 +30,7 @@ export const permissionService = {
    * @param id 权限ID
    */
   getPermissionById: async (id: number) => {
-    const response = await businessApi.get(`/api/permissions/${id}`);
-    return response.data;
+    return await businessApi.get(`/api/permissions/${id}`);
   },
 
   /**
@@ -33,8 +38,7 @@ export const permissionService = {
    * @param permission 权限信息
    */
   createPermission: async (permission: any) => {
-    const response = await businessApi.post('/api/permissions', permission);
-    return response.data;
+    return await businessApi.post('/api/permissions', permission);
   },
 
   /**
@@ -43,8 +47,7 @@ export const permissionService = {
    * @param permission 权限信息
    */
   updatePermission: async (id: number, permission: any) => {
-    const response = await businessApi.put(`/api/permissions/${id}`, permission);
-    return response.data;
+    return await businessApi.put(`/api/permissions/${id}`, permission);
   },
 
   /**
@@ -52,8 +55,7 @@ export const permissionService = {
    * @param id 权限ID
    */
   deletePermission: async (id: number) => {
-    const response = await businessApi.delete(`/api/permissions/${id}`);
-    return response.data;
+    return await businessApi.delete(`/api/permissions/${id}`);
   },
 
   /**
@@ -62,15 +64,13 @@ export const permissionService = {
    * @param status 状态（1启用，0禁用）
    */
   togglePermissionStatus: async (id: number, status: number) => {
-    const response = await businessApi.patch(`/api/permissions/${id}/status`, { status });
-    return response.data;
+    return await businessApi.patch(`/api/permissions/${id}/status`, { status });
   },
 
   /**
    * 获取权限树
    */
   getPermissionTree: async () => {
-    const response = await businessApi.get('/api/permissions/tree');
-    return response.data;
+    return await businessApi.get('/api/permissions/tree');
   }
 };
