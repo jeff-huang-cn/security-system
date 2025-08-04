@@ -17,7 +17,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setLoading(true);
     try {
       const response = await authService.login(values.username, values.password);
-      
+      debugger;
       if (response.access_token) {
         message.success('登录成功');
         // 使用access_token作为token，用户信息暂时使用用户名

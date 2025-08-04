@@ -1,10 +1,17 @@
-package com.webapp.security.admin.controller;
+package com.webapp.security.admin.controller.user;
 
-import com.webapp.security.core.model.ResponseResult;
+import com.webapp.security.admin.controller.user.dto.RoleIdsDTO;
+import com.webapp.security.admin.controller.user.dto.StatusDTO;
+import com.webapp.security.admin.controller.user.dto.UserCreateDTO;
+import com.webapp.security.admin.controller.user.dto.UserUpdateDTO;
+import com.webapp.security.admin.controller.user.vo.UserVO;
+import com.webapp.security.admin.converter.UserConverter;
 import com.webapp.security.core.entity.SysUser;
+import com.webapp.security.core.model.ResponseResult;
 import com.webapp.security.core.service.SysUserService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -14,20 +21,20 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/users")
-@CrossOrigin(origins = "*")
+@RequiredArgsConstructor
 public class UserController {
 
-    @Autowired
-    private SysUserService userService;
+    private final SysUserService userService;
+    private final UserConverter userConverter;
 
     /**
      * 获取所有用户
      */
     @GetMapping
     @PreAuthorize("hasAuthority('USER_QUERY')")
-    public ResponseResult<List<SysUser>> getAllUsers() {
+    public ResponseResult<List<UserVO>> getAllUsers() {
         List<SysUser> users = userService.list();
-        return ResponseResult.success(users);
+        return ResponseResult.success(userConverter.toVOList(users));
     }
 
     /**
@@ -35,9 +42,12 @@ public class UserController {
      */
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('USER_QUERY')")
-    public ResponseResult<SysUser> getUserById(@PathVariable Long id) {
+    public ResponseResult<UserVO> getUserById(@PathVariable Long id) {
         SysUser user = userService.getById(id);
-        return user != null ? ResponseResult.success(user) : ResponseResult.failed("用户不存在");
+        if (user == null) {
+            return ResponseResult.failed("用户不存在");
+        }
+        return ResponseResult.success(userConverter.toVO(user));
     }
 
     /**
@@ -45,7 +55,8 @@ public class UserController {
      */
     @PostMapping
     @PreAuthorize("hasAuthority('USER_CREATE')")
-    public ResponseResult<Void> createUser(@RequestBody SysUser user) {
+    public ResponseResult<Void> createUser(@Validated @RequestBody UserCreateDTO dto) {
+        SysUser user = userConverter.fromCreateDTO(dto);
         boolean success = userService.createUser(user);
         return success ? ResponseResult.success(null, "用户创建成功") : ResponseResult.failed("用户创建失败");
     }
@@ -55,8 +66,13 @@ public class UserController {
      */
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('USER_UPDATE')")
-    public ResponseResult<Void> updateUser(@PathVariable Long id, @RequestBody SysUser user) {
-        user.setUserId(id);
+    public ResponseResult<Void> updateUser(@PathVariable Long id, @Validated @RequestBody UserUpdateDTO dto) {
+        SysUser user = userService.getById(id);
+        if (user == null) {
+            return ResponseResult.failed("用户不存在");
+        }
+
+        userConverter.updateEntityFromDTO(dto, user);
         boolean success = userService.updateUser(user);
         return success ? ResponseResult.success(null, "用户更新成功") : ResponseResult.failed("用户更新失败");
     }
@@ -76,8 +92,8 @@ public class UserController {
      */
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasAuthority('USER_UPDATE')")
-    public ResponseResult<Void> updateUserStatus(@PathVariable Long id, @RequestBody StatusRequest statusRequest) {
-        boolean success = userService.updateUserStatus(id, statusRequest.getStatus());
+    public ResponseResult<Void> updateUserStatus(@PathVariable Long id, @Validated @RequestBody StatusDTO dto) {
+        boolean success = userService.updateUserStatus(id, dto.getStatus());
         return success ? ResponseResult.success(null, "用户状态更新成功") : ResponseResult.failed("用户状态更新失败");
     }
 
@@ -86,8 +102,8 @@ public class UserController {
      */
     @PostMapping("/{id}/roles")
     @PreAuthorize("hasAuthority('USER_UPDATE')")
-    public ResponseResult<Void> assignRoles(@PathVariable Long id, @RequestBody RoleIdsRequest request) {
-        boolean success = userService.assignRoles(id, request.getRoleIds());
+    public ResponseResult<Void> assignRoles(@PathVariable Long id, @Validated @RequestBody RoleIdsDTO dto) {
+        boolean success = userService.assignRoles(id, dto.getRoleIds());
         return success ? ResponseResult.success(null, "角色分配成功") : ResponseResult.failed("角色分配失败");
     }
 
@@ -109,35 +125,5 @@ public class UserController {
     public ResponseResult<List<String>> getUserRoles(@PathVariable Long id) {
         List<String> roles = userService.getUserRoles(id);
         return ResponseResult.success(roles);
-    }
-
-    /**
-     * 状态请求类
-     */
-    public static class StatusRequest {
-        private Integer status;
-
-        public Integer getStatus() {
-            return status;
-        }
-
-        public void setStatus(Integer status) {
-            this.status = status;
-        }
-    }
-
-    /**
-     * 角色ID请求类
-     */
-    public static class RoleIdsRequest {
-        private List<Long> roleIds;
-
-        public List<Long> getRoleIds() {
-            return roleIds;
-        }
-
-        public void setRoleIds(List<Long> roleIds) {
-            this.roleIds = roleIds;
-        }
     }
 }

@@ -1,4 +1,5 @@
 import { authApi } from './api';
+import { TokenManager } from './tokenManager';
 
 /**
  * 认证服务模块
@@ -30,17 +31,22 @@ export const authService = {
       password
     });
 
+    console.log('Login response:', response.data);
+
     // 提取token信息
     const { access_token, refresh_token } = response.data;
     
-    // 保存access_token到本地存储
-    if (access_token) {
-      localStorage.setItem('access_token', access_token);
+    // 解析过期时间，确保它是一个数字
+    let expires_in = response.data.expires_in;
+    if (typeof expires_in === 'string') {
+      expires_in = parseInt(expires_in, 10);
     }
     
-    // 保存refresh_token到本地存储（用于后续自动刷新）
-    if (refresh_token) {
-      localStorage.setItem('refresh_token', refresh_token);
+    console.log('Token expires in:', expires_in, 'seconds');
+    
+    // 使用TokenManager保存token信息
+    if (access_token) {
+      TokenManager.saveTokens(access_token, refresh_token, expires_in);
     }
 
     return response.data;
@@ -61,7 +67,7 @@ export const authService = {
    * 注意：此函数主要供api.ts中的自动刷新机制调用
    */
   refreshToken: async (refreshToken?: string) => {
-    const token = refreshToken || localStorage.getItem('refresh_token');
+    const token = refreshToken || TokenManager.getRefreshToken();
     if (!token) {
       throw new Error('No refresh token available');
     }
@@ -70,15 +76,22 @@ export const authService = {
       refreshToken: token
     });
 
+    console.log('Refresh response:', response.data);
+
     // 更新本地存储的token
     const { access_token, refresh_token: newRefreshToken } = response.data;
     
-    if (access_token) {
-      localStorage.setItem('access_token', access_token);
+    // 解析过期时间，确保它是一个数字
+    let expires_in = response.data.expires_in;
+    if (typeof expires_in === 'string') {
+      expires_in = parseInt(expires_in, 10);
     }
     
-    if (newRefreshToken) {
-      localStorage.setItem('refresh_token', newRefreshToken);
+    console.log('Token expires in:', expires_in, 'seconds');
+    
+    // 使用TokenManager保存token信息
+    if (access_token) {
+      TokenManager.saveTokens(access_token, newRefreshToken, expires_in);
     }
 
     return response.data;
@@ -104,7 +117,7 @@ export const authService = {
   logout: async () => {
     try {
       // 获取access_token用于服务端注销
-      const accessToken = localStorage.getItem('access_token');
+      const accessToken = TokenManager.getAccessToken();
       if (accessToken) {
         await authApi.post('/oauth2/logout', {
           accessToken: accessToken
@@ -115,8 +128,7 @@ export const authService = {
       console.error('Logout API call failed:', error);
     } finally {
       // 清除本地存储的token
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
+      TokenManager.clearTokens();
     }
   },
 
@@ -130,15 +142,12 @@ export const authService = {
    * @returns boolean 是否已认证
    * 
    * 判断逻辑：
-   * 1. 检查localStorage中是否存在access_token和refresh_token
-   * 2. 两者都存在才认为用户已认证
+   * 1. 使用TokenManager检查用户是否已认证
    * 
    * 注意：这只是前端的简单判断，真正的认证状态需要后端验证
    */
   isAuthenticated: (): boolean => {
-    const accessToken = localStorage.getItem('access_token');
-    const refreshToken = localStorage.getItem('refresh_token');
-    return !!(accessToken && refreshToken);
+    return TokenManager.isAuthenticated();
   },
 
   /**
@@ -147,7 +156,7 @@ export const authService = {
    * @returns string | null 访问令牌
    */
   getAccessToken: (): string | null => {
-    return localStorage.getItem('access_token');
+    return TokenManager.getAccessToken();
   },
 
   /**
@@ -156,6 +165,6 @@ export const authService = {
    * @returns string | null 刷新令牌
    */
   getRefreshToken: (): string | null => {
-    return localStorage.getItem('refresh_token');
+    return TokenManager.getRefreshToken();
   }
 };

@@ -1,89 +1,74 @@
-import React, { useState, useEffect } from 'react';
-import { ConfigProvider, theme } from 'antd';
-import zhCN from 'antd/locale/zh_CN';
-import Login from './components/Login';
+import React, { useEffect, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import Dashboard from './components/Dashboard';
-import ProtectedRoute from './components/ProtectedRoute';
-import './App.css';
+import Login from './components/Login';
+import { authService } from './services/authService';
+import { TokenRefresher } from './services/tokenRefresher';
 
-const App: React.FC = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+function App() {
   const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
+  
+  // 组件挂载时初始化TokenRefresher
   useEffect(() => {
-    // 检查本地存储中的token
-    const token = localStorage.getItem('access_token');
-    const userData = localStorage.getItem('user_data');
+    // 初始化Token自动刷新机制
+    TokenRefresher.initialize();
     
-    if (token && userData) {
-      try {
-        const parsedUser = JSON.parse(userData);
-        setUser(parsedUser);
-        setIsAuthenticated(true);
-      } catch (error) {
-        console.error('解析用户数据失败:', error);
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('user_data');
+    // 检查用户是否已登录
+    if (authService.isAuthenticated()) {
+      // 从本地存储获取用户信息，或设置默认值
+      const userString = localStorage.getItem('user');
+      if (userString) {
+        try {
+          setUser(JSON.parse(userString));
+        } catch (e) {
+          setUser({ username: 'admin' }); // 默认用户
+        }
+      } else {
+        setUser({ username: 'admin' }); // 默认用户
       }
     }
     
-    setLoading(false);
+    // 组件卸载时停止刷新循环
+    return () => {
+      TokenRefresher.stopRefreshCycle();
+    };
   }, []);
-
+  
+  // 处理登录成功
   const handleLogin = (token: string, userData: any) => {
-    localStorage.setItem('access_token', token);
-    localStorage.setItem('user_data', JSON.stringify(userData));
     setUser(userData);
-    setIsAuthenticated(true);
+    // 保存用户信息到本地存储
+    localStorage.setItem('user', JSON.stringify(userData));
+    // 重定向到仪表盘
+    window.location.href = '/dashboard';
   };
-
+  
+  // 处理登出
   const handleLogout = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('user_data');
     setUser(null);
-    setIsAuthenticated(false);
+    localStorage.removeItem('user');
+    // 重定向到登录页
+    window.location.href = '/login';
   };
-
-  if (loading) {
-    return (
-      <ConfigProvider locale={zhCN}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100vh',
-          fontSize: '16px'
-        }}>
-          加载中...
-        </div>
-      </ConfigProvider>
-    );
-  }
 
   return (
-    <ConfigProvider
-      locale={zhCN}
-      theme={{
-        token: {
-          colorPrimary: '#667eea',
-          borderRadius: 6,
-          wireframe: false,
-        },
-        algorithm: theme.defaultAlgorithm,
-      }}
-    >
-      <div className="App">
-        {!isAuthenticated ? (
-          <Login onLogin={handleLogin} />
-        ) : (
-          <ProtectedRoute>
-            <Dashboard user={user} onLogout={handleLogout} />
-          </ProtectedRoute>
-        )}
-      </div>
-    </ConfigProvider>
+    <Router>
+      <Routes>
+        <Route path="/login" element={<Login onLogin={handleLogin} />} />
+        <Route
+          path="/dashboard/*"
+          element={
+            authService.isAuthenticated() ? (
+              <Dashboard user={user || { username: 'admin' }} onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
+        <Route path="/" element={<Navigate to="/dashboard" />} />
+      </Routes>
+    </Router>
   );
-};
+}
 
 export default App;

@@ -393,16 +393,16 @@ public class OAuth2Controller {
                     authorizationBuilder);
 
             // 9. 可选：生成新的刷新令牌（根据配置决定）
-            OAuth2RefreshToken newRefreshToken = null;
-            if (registeredClient.getTokenSettings().isReuseRefreshTokens()) {
-                // 重用现有刷新令牌
-                newRefreshToken = refreshToken.getToken();
-            } else {
-                // 先删除旧的授权记录
-                authorizationService.remove(authorization);
-                // 生成新的刷新令牌
-                newRefreshToken = generateRefreshToken(authentication, registeredClient, authorizationBuilder);
-            }
+            // 不移除授权，因为我们是提前刷新，旧令牌还未失效可以继续使用，避免请求被401
+            OAuth2RefreshToken newRefreshToken = refreshToken.getToken();
+            //if (registeredClient.getTokenSettings().isReuseRefreshTokens()) {
+            //    // 重用现有刷新令牌
+            //    newRefreshToken = refreshToken.getToken();
+            //} else {
+            //    // 先删除旧的授权记录，再生成新的刷新令牌
+            //    authorizationService.remove(authorization);
+            //    newRefreshToken = generateRefreshToken(authentication, registeredClient, authorizationBuilder);
+            //}
             
             // 10. 保存授权记录
             OAuth2Authorization newAuthorization = authorizationBuilder.build();

@@ -20,9 +20,15 @@ export class TokenManager {
       localStorage.setItem(this.REFRESH_TOKEN_KEY, refreshToken);
     }
     
-    if (expiresIn) {
+    if (expiresIn && !isNaN(expiresIn)) {
       const expiryTime = Date.now() + (expiresIn * 1000);
       localStorage.setItem(this.TOKEN_EXPIRY_KEY, expiryTime.toString());
+      console.log(`Token will expire at: ${new Date(expiryTime).toLocaleString()}`);
+    } else {
+      // 如果没有提供有效的过期时间，使用默认值（30分钟）
+      const defaultExpiry = Date.now() + (30 * 60 * 1000);
+      localStorage.setItem(this.TOKEN_EXPIRY_KEY, defaultExpiry.toString());
+      console.log(`Using default expiry time: ${new Date(defaultExpiry).toLocaleString()}`);
     }
   }
 
@@ -50,6 +56,10 @@ export class TokenManager {
     }
     
     const expiry = parseInt(expiryTime, 10);
+    if (isNaN(expiry)) {
+      return false;
+    }
+    
     const now = Date.now();
     const fiveMinutes = 5 * 60 * 1000; // 5分钟
     
@@ -84,8 +94,14 @@ export class TokenManager {
     }
     
     const expiry = parseInt(expiryTime, 10);
-    const now = Date.now();
+    if (isNaN(expiry)) {
+      return 0;
+    }
     
-    return Math.max(0, expiry - now);
+    const now = Date.now();
+    const remainingTime = Math.max(0, expiry - now);
+    
+    console.log(`Token remaining time: ${Math.round(remainingTime / 1000)} seconds`);
+    return remainingTime;
   }
 }
