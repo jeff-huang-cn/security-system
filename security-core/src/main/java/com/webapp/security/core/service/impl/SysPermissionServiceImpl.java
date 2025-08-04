@@ -4,6 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.webapp.security.core.entity.SysPermission;
+import com.webapp.security.core.exception.BizException;
 import com.webapp.security.core.mapper.SysPermissionMapper;
 import com.webapp.security.core.mapper.SysRolePermissionMapper;
 import com.webapp.security.core.service.SysPermissionService;
@@ -22,7 +23,8 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
-public class SysPermissionServiceImpl extends ServiceImpl<SysPermissionMapper, SysPermission> implements SysPermissionService {
+public class SysPermissionServiceImpl extends ServiceImpl<SysPermissionMapper, SysPermission>
+        implements SysPermissionService {
 
     private final SysRolePermissionMapper rolePermissionMapper;
 
@@ -43,7 +45,7 @@ public class SysPermissionServiceImpl extends ServiceImpl<SysPermissionMapper, S
 
         // 检查权限编码是否已存在
         if (getByCode(permission.getPermCode()) != null) {
-            throw new RuntimeException("权限编码已存在");
+            throw PermissionBizExceptionBuilder.codeAlreadyExists("权限编码已存在");
         }
 
         permission.setCreateTime(LocalDateTime.now());
@@ -62,14 +64,15 @@ public class SysPermissionServiceImpl extends ServiceImpl<SysPermissionMapper, S
 
         SysPermission existingPermission = getById(permission.getPermissionId());
         if (existingPermission == null) {
-            throw new RuntimeException("权限不存在");
+            throw PermissionBizExceptionBuilder.notFound(permission.getPermissionId());
         }
 
         // 检查权限编码是否被其他权限使用
-        if (StrUtil.isNotBlank(permission.getPermCode()) && !permission.getPermCode().equals(existingPermission.getPermCode())) {
+        if (StrUtil.isNotBlank(permission.getPermCode())
+                && !permission.getPermCode().equals(existingPermission.getPermCode())) {
             SysPermission permissionByCode = getByCode(permission.getPermCode());
             if (permissionByCode != null && !permissionByCode.getPermissionId().equals(permission.getPermissionId())) {
-                throw new RuntimeException("权限编码已被其他权限使用");
+                throw PermissionBizExceptionBuilder.codeAlreadyExists("权限编码已被其他权限使用");
             }
         }
 
@@ -92,7 +95,7 @@ public class SysPermissionServiceImpl extends ServiceImpl<SysPermissionMapper, S
         // 检查是否有子权限
         List<SysPermission> childPermissions = getChildPermissions(permissionId);
         if (!childPermissions.isEmpty()) {
-            throw new RuntimeException("存在子权限，无法删除");
+            throw PermissionBizExceptionBuilder.hasChildren("存在子权限，无法删除");
         }
 
         // 删除角色权限关联
@@ -159,8 +162,8 @@ public class SysPermissionServiceImpl extends ServiceImpl<SysPermissionMapper, S
 
         // 按父ID分组
         Map<Long, List<SysPermission>> permissionMap = permissions.stream()
-                .collect(Collectors.groupingBy(permission ->
-                        permission.getParentId() == null ? 0L : permission.getParentId()));
+                .collect(Collectors
+                        .groupingBy(permission -> permission.getParentId() == null ? 0L : permission.getParentId()));
 
         // 构建树形结构
         List<SysPermission> rootPermissions = permissionMap.getOrDefault(0L, new ArrayList<>());
@@ -181,5 +184,26 @@ public class SysPermissionServiceImpl extends ServiceImpl<SysPermissionMapper, S
             }
         }
     }
-}
 
+    private static class PermissionBizExceptionBuilder {
+        public static BizException of(String code, String message) {
+            return new BizException("PERMISSION_" + code, message);
+        }
+
+        public static BizException notFound(Long permissionId) {
+            return of("NOT_FOUND", "权限" + permissionId + "不存在");
+        }
+
+        public static BizException of(String message) {
+            return of("INTERNAL_SERVER_ERROR", message);
+        }
+
+        public static BizException codeAlreadyExists(String message) {
+            return of("CODE_ALREADY_EXISTS", message);
+        }
+
+        public static BizException hasChildren(String message) {
+            return of("HAS_CHILDREN", message);
+        }
+    }
+}

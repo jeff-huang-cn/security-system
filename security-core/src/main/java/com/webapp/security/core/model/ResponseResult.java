@@ -1,5 +1,8 @@
 package com.webapp.security.core.model;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.io.Serializable;
 
 /**
@@ -7,6 +10,8 @@ import java.io.Serializable;
  * 
  * @param <T> 数据类型
  */
+@Getter
+@Setter
 public class ResponseResult<T> implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -14,7 +19,7 @@ public class ResponseResult<T> implements Serializable {
     /**
      * 状态码
      */
-    private Integer code = 200;
+    private String code = "success";
 
     /**
      * 消息
@@ -29,12 +34,12 @@ public class ResponseResult<T> implements Serializable {
     public ResponseResult() {
     }
 
-    public ResponseResult(Integer code, String message) {
+    public ResponseResult(String code, String message) {
         this.code = code;
         this.message = message;
     }
 
-    public ResponseResult(Integer code, String message, T data) {
+    public ResponseResult(String code, String message, T data) {
         this.code = code;
         this.message = message;
         this.data = data;
@@ -79,7 +84,7 @@ public class ResponseResult<T> implements Serializable {
      * 失败返回结果
      */
     public static <T> ResponseResult<T> failed() {
-        return new ResponseResult<>(50000, "操作失败");
+        return new ResponseResult<>(ErrorCode.INTERNAL, "操作失败");
     }
 
     /**
@@ -88,7 +93,7 @@ public class ResponseResult<T> implements Serializable {
      * @param code    状态码
      * @param message 提示信息
      */
-    public static <T> ResponseResult<T> failed(Integer code, String message) {
+    public static <T> ResponseResult<T> failed(String code, String message) {
         return new ResponseResult<>(code, message);
     }
 
@@ -98,30 +103,6 @@ public class ResponseResult<T> implements Serializable {
      * @param message 提示信息
      */
     public static <T> ResponseResult<T> failed(String message) {
-        return new ResponseResult<>(50000, message);
-    }
-
-    public Integer getCode() {
-        return code;
-    }
-
-    public void setCode(Integer code) {
-        this.code = code;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
-    }
-
-    public T getData() {
-        return data;
-    }
-
-    public void setData(T data) {
-        this.data = data;
+        return new ResponseResult<>(ErrorCode.INTERNAL, message);
     }
 }

@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.webapp.security.core.entity.SysRole;
 import com.webapp.security.core.entity.SysRolePermission;
+import com.webapp.security.core.exception.BizException;
 import com.webapp.security.core.mapper.SysRoleMapper;
 import com.webapp.security.core.mapper.SysRolePermissionMapper;
 import com.webapp.security.core.mapper.SysUserRoleMapper;
@@ -44,7 +45,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
 
         // 检查角色编码是否已存在
         if (getByCode(role.getRoleCode()) != null) {
-            throw new RuntimeException("角色编码已存在");
+            throw RoleBizExceptionBuilder.codeAlreadyExists("角色编码已存在");
         }
 
         role.setCreateTime(LocalDateTime.now());
@@ -63,14 +64,14 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
 
         SysRole existingRole = getById(role.getRoleId());
         if (existingRole == null) {
-            throw new RuntimeException("角色不存在");
+            throw RoleBizExceptionBuilder.notFound(role.getRoleId());
         }
 
         // 检查角色编码是否被其他角色使用
         if (StrUtil.isNotBlank(role.getRoleCode()) && !role.getRoleCode().equals(existingRole.getRoleCode())) {
             SysRole roleByCode = getByCode(role.getRoleCode());
             if (roleByCode != null && !roleByCode.getRoleId().equals(role.getRoleId())) {
-                throw new RuntimeException("角色编码已被其他角色使用");
+                throw RoleBizExceptionBuilder.codeAlreadyExists("角色编码已被其他角色使用");
             }
         }
 
@@ -170,5 +171,22 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
                 .orderByAsc(SysRole::getCreateTime);
         return list(wrapper);
     }
-}
 
+    private static class RoleBizExceptionBuilder {
+        public static BizException of(String code, String message) {
+            return new BizException("ROLE_" + code, message);
+        }
+
+        public static BizException notFound(Long roleId) {
+            return of("NOT_FOUND", "角色" + roleId + "不存在");
+        }
+
+        public static BizException of(String message) {
+            return of("INTERNAL_SERVER_ERROR", message);
+        }
+
+        public static BizException codeAlreadyExists(String message) {
+            return of("CODE_ALREADY_EXISTS", message);
+        }
+    }
+}

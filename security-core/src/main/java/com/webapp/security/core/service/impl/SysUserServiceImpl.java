@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.webapp.security.core.entity.SysUser;
 import com.webapp.security.core.entity.SysUserRole;
+import com.webapp.security.core.exception.BizException;
 import com.webapp.security.core.mapper.SysUserMapper;
 import com.webapp.security.core.mapper.SysUserRoleMapper;
 import com.webapp.security.core.service.SysUserService;
@@ -58,17 +59,17 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 
         // 检查用户名是否已存在
         if (getByUsername(user.getUsername()) != null) {
-            throw new RuntimeException("用户名已存在");
+            throw UserBizExceptionBuilder.usernameAlreadyExists("用户名已存在");
         }
 
         // 检查邮箱是否已存在
         if (StrUtil.isNotBlank(user.getEmail()) && getByEmail(user.getEmail()) != null) {
-            throw new RuntimeException("邮箱已存在");
+            throw UserBizExceptionBuilder.emailAlreadyExists("邮箱已存在");
         }
 
         // 检查手机号是否已存在
         if (StrUtil.isNotBlank(user.getPhone()) && getByPhone(user.getPhone()) != null) {
-            throw new RuntimeException("手机号已存在");
+            throw UserBizExceptionBuilder.phoneAlreadyExists("手机号已存在");
         }
 
         // 加密密码
@@ -92,14 +93,14 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 
         SysUser existingUser = getById(user.getUserId());
         if (existingUser == null) {
-            throw new RuntimeException("用户不存在");
+            throw UserBizExceptionBuilder.notFound(user.getUserId());
         }
 
         // 检查用户名是否被其他用户使用
         if (StrUtil.isNotBlank(user.getUsername()) && !user.getUsername().equals(existingUser.getUsername())) {
             SysUser userByUsername = getByUsername(user.getUsername());
             if (userByUsername != null && !userByUsername.getUserId().equals(user.getUserId())) {
-                throw new RuntimeException("用户名已被其他用户使用");
+                throw UserBizExceptionBuilder.usernameAlreadyExists("用户名已被其他用户使用");
             }
         }
 
@@ -107,7 +108,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         if (StrUtil.isNotBlank(user.getEmail()) && !user.getEmail().equals(existingUser.getEmail())) {
             SysUser userByEmail = getByEmail(user.getEmail());
             if (userByEmail != null && !userByEmail.getUserId().equals(user.getUserId())) {
-                throw new RuntimeException("邮箱已被其他用户使用");
+                throw UserBizExceptionBuilder.emailAlreadyExists("邮箱已被其他用户使用");
             }
         }
 
@@ -115,7 +116,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         if (StrUtil.isNotBlank(user.getPhone()) && !user.getPhone().equals(existingUser.getPhone())) {
             SysUser userByPhone = getByPhone(user.getPhone());
             if (userByPhone != null && !userByPhone.getUserId().equals(user.getUserId())) {
-                throw new RuntimeException("手机号已被其他用户使用");
+                throw UserBizExceptionBuilder.phoneAlreadyExists( "手机号已被其他用户使用");
             }
         }
 
@@ -233,6 +234,32 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         }
 
         return BCrypt.checkpw(password, user.getPassword());
+    }
+
+    private static class UserBizExceptionBuilder {
+        public static BizException of(String code, String message) {
+            return new BizException("USER_" + code, message);
+        }
+
+        public static BizException notFound(Long userId) {
+            return of("NOT_FOUND", "用户" + userId + "不存在");
+        }
+
+        public static BizException of(String message) {
+            return of("INTERNAL_SERVER_ERROR", message);
+        }
+
+        public static BizException usernameAlreadyExists(String message) {
+            return of("USERNAME_ALREADY_EXISTS", message);
+        }
+
+        public static BizException emailAlreadyExists(String message) {
+            return of("EMAIL_ALREADY_EXISTS", message);
+        }
+
+        public static BizException phoneAlreadyExists(String message) {
+            return of("PHONE_ALREADY_EXISTS", message);
+        }
     }
 }
 

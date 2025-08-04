@@ -1,5 +1,6 @@
 package com.webapp.security.core.exception;
 
+import com.webapp.security.core.model.ErrorCode;
 import com.webapp.security.core.model.ResponseResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,20 +23,20 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.OK)
     public ResponseResult<Void> handleBusinessException(BizException e, HttpServletRequest request) {
         log.warn("业务异常：{}，请求URL：{}", e.getMessage(), request.getRequestURI());
-        return ResponseResult.failed(e.getCode(), e.getMessage());
+        return ResponseResult.failed(ErrorCode.INTERNAL, e.getMessage());
     }
 
     @ExceptionHandler(RuntimeException.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ResponseResult<Void> handleRuntimeException(Exception e, HttpServletRequest request) {
         log.error("系统异常：{}，请求URL：{}", e.getMessage(), request.getRequestURI(), e);
-        return ResponseResult.failed(40000, e.getMessage());
+        return ResponseResult.failed(ErrorCode.INTERNAL, e.getMessage());
     }
 
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ResponseResult<Void> handleException(Exception e, HttpServletRequest request) {
         log.error("系统异常：{}，请求URL：{}", e.getMessage(), request.getRequestURI(), e);
-        return ResponseResult.failed(50000, "系统异常");
+        return ResponseResult.failed(ErrorCode.INTERNAL, "系统异常");
     }
 }
