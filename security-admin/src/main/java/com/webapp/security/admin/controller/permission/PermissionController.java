@@ -1,5 +1,6 @@
 package com.webapp.security.admin.controller.permission;
 
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.webapp.security.admin.controller.permission.dto.PermissionCreateDTO;
@@ -39,10 +40,11 @@ public class PermissionController {
     @PreAuthorize("hasAuthority('PERMISSION_QUERY')")
     public ResponseResult<PagedResult<PermissionVO>> findPermissionPaged(@RequestBody PagedDTO paged) {
         Page<SysPermission> page = new Page<>(paged.getPageNum(), paged.getPageSize());
+        String keyword = paged.getKeyword();
         Page<SysPermission> pageResult = permissionService.page(page, new LambdaQueryWrapper<SysPermission>()
-                .like(SysPermission::getPermName, paged.getKeyword())
-                .or()
-                .like(SysPermission::getPermCode, paged.getKeyword()));
+                .like(StrUtil.isNotBlank(keyword), SysPermission::getPermName, keyword)
+                .or(StrUtil.isNotBlank(keyword), condition -> condition
+                        .like(SysPermission::getPermCode, keyword)));
         List<PermissionVO> voList = permissionConverter.toVOList(pageResult.getRecords());
         return ResponseResult.success(new PagedResult<>(voList, pageResult.getTotal()));
     }

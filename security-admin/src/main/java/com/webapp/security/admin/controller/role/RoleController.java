@@ -1,5 +1,6 @@
 package com.webapp.security.admin.controller.role;
 
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.webapp.security.admin.controller.role.dto.PermissionIdsDTO;
@@ -37,10 +38,13 @@ public class RoleController {
     @PreAuthorize("hasAuthority('ROLE_QUERY')")
     public ResponseResult<PagedResult<RoleVO>> findRolePaged(@RequestBody PagedDTO paged) {
         Page<SysRole> page = new Page<>(paged.getPageNum(), paged.getPageSize());
-        Page<SysRole> pageResult = roleService.page(page, new LambdaQueryWrapper<SysRole>()
-                .like(SysRole::getRoleName, paged.getKeyword())
-                .or()
-                .like(SysRole::getRoleCode, paged.getKeyword()));
+        String keyword = paged.getKeyword();
+        LambdaQueryWrapper<SysRole> queryWrapper = new LambdaQueryWrapper<SysRole>()
+                .like(StrUtil.isNotBlank(keyword), SysRole::getRoleName, keyword)
+                .or(StrUtil.isNotBlank(keyword), condition -> condition
+                        .like(SysRole::getRoleCode, keyword));
+
+        Page<SysRole> pageResult = roleService.page(page, queryWrapper);
         List<RoleVO> voList = roleConverter.toVOList(pageResult.getRecords());
         return ResponseResult.success(new PagedResult<>(voList, pageResult.getTotal()));
     }

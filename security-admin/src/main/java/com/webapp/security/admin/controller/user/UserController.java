@@ -1,5 +1,6 @@
 package com.webapp.security.admin.controller.user;
 
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.webapp.security.admin.controller.user.dto.*;
@@ -32,10 +33,13 @@ public class UserController {
     @PreAuthorize("hasAuthority('USER_QUERY')")
     public ResponseResult<PagedResult<UserVO>> findUserPaged(@RequestBody PagedDTO paged) {
         Page<SysUser> page = new Page<>(paged.getPageNum(), paged.getPageSize());
-        Page<SysUser> pageResult = userService.page(page, new LambdaQueryWrapper<SysUser>()
-                .like(SysUser::getUsername, paged.getKeyword())
-                .or()
-                .like(SysUser::getRealName, paged.getKeyword()));
+        String keyword = paged.getKeyword();
+        LambdaQueryWrapper<SysUser> queryWrapper = new LambdaQueryWrapper<SysUser>()
+                .like(StrUtil.isNotBlank(keyword), SysUser::getUsername, keyword)
+                .or(StrUtil.isNotBlank(keyword), condition -> condition
+                        .like(SysUser::getRealName, keyword));
+
+        Page<SysUser> pageResult = userService.page(page, queryWrapper);
         List<UserVO> voList = userConverter.toVOList(pageResult.getRecords());
         return ResponseResult.success(new PagedResult<>(voList, pageResult.getTotal()));
     }

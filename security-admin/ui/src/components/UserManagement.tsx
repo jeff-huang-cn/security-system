@@ -487,25 +487,48 @@ const UserManagement: React.FC = () => {
 
       {/* 角色分配模态框 */}
       <Modal
-        title="分配角色"
+        title={<div style={{ borderBottom: '1px solid #f0f0f0', paddingBottom: 10, fontSize: 16, fontWeight: 500 }}>分配角色</div>}
         open={showRoleModal}
         onOk={handleSaveRoles}
         onCancel={() => setShowRoleModal(false)}
         okText="保存"
         cancelText="取消"
-        width={400}
+        width={700}
+        centered
+        bodyStyle={{ padding: '10px 24px 12px' }}
+        okButtonProps={{ style: { borderRadius: 4 } }}
+        cancelButtonProps={{ style: { borderRadius: 4 } }}
       >
-        <div style={{ maxHeight: 300, overflowY: 'auto' }}>
+        <div 
+          style={{ 
+            maxHeight: 400, 
+            overflowY: 'auto', 
+            overflowX: 'hidden',
+            padding: '12px',
+            background: '#f9f9f9',
+            borderRadius: 6,
+            marginTop: 5
+          }}
+        >
           <Checkbox.Group
             value={selectedRoles}
             onChange={setSelectedRoles}
             style={{ width: '100%' }}
           >
-            <Row>
+            <Row gutter={[20, 16]}>
               {roles.map((role) => (
-                <Col span={24} key={role.roleId} style={{ marginBottom: 8 }}>
-                  <Checkbox value={role.roleId}>
-                    {role.roleName}
+                <Col span={6} key={role.roleId}>
+                  <Checkbox 
+                    value={role.roleId} 
+                    style={{ 
+                      width: '100%', 
+                      whiteSpace: 'normal',
+                      paddingLeft: 24
+                    }}
+                  >
+                    <span style={{ fontWeight: role.roleCode === 'ADMIN' ? 500 : 400 }}>
+                      {role.roleName}
+                    </span>
                   </Checkbox>
                 </Col>
               ))}

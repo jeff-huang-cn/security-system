@@ -3,6 +3,7 @@ package com.webapp.security.core.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.webapp.security.core.entity.SysUserRole;
 import org.apache.ibatis.annotations.Delete;
+import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -42,6 +43,11 @@ public interface SysUserRoleMapper extends BaseMapper<SysUserRole> {
     /**
      * 批量插入用户角色关联
      */
+    @Insert("<script>" +
+            "INSERT INTO sys_user_role (user_id, role_id, create_time) VALUES " +
+            "<foreach collection='userRoles' item='item' separator=','>" +
+            "(#{item.userId}, #{item.roleId}, #{item.createTime})" +
+            "</foreach>" +
+            "</script>")
     int batchInsert(@Param("userRoles") List<SysUserRole> userRoles);
 }
-

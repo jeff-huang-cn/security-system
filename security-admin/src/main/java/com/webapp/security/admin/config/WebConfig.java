@@ -53,22 +53,19 @@ public class WebConfig implements WebMvcConfigurer {
                 .maxAge(3600);
     }
 
-    /**
-     * 提供一个额外的 WebMvcConfigurer 来确保 CORS 配置被正确应用
-     */
-    @Bean
-    public WebMvcConfigurer corsConfigurer() {
-        return new WebMvcConfigurer() {
-            @Override
-            public void addCorsMappings(CorsRegistry registry) {
-                registry.addMapping("/**")
-                        .allowedOrigins("http://localhost:8081")
-                        .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-                        .allowedHeaders("*")
-                        .exposedHeaders("Authorization")
-                        .allowCredentials(true)
-                        .maxAge(3600);
-            }
-        };
-    }
+    //@Bean
+    //public WebMvcConfigurer corsConfigurer() {
+    //    return new WebMvcConfigurer() {
+    //        @Override
+    //        public void addCorsMappings(CorsRegistry registry) {
+    //            registry.addMapping("/**")
+    //                    .allowedOrigins("http://localhost:8081")
+    //                    .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+    //                    .allowedHeaders("*")
+    //                    .exposedHeaders("Authorization")
+    //                    .allowCredentials(true)
+    //                    .maxAge(3600);
+    //        }
+    //    };
+    //}
 }
