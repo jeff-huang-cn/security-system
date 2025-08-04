@@ -11,11 +11,11 @@ export const permissionService = {
    * @param keyword 搜索关键词
    */
   getPermissions: async (page: number = 1, size: number = 10, keyword?: string) => {
-    const params = { page, size };
+    const params = { pageNum: page, pageSize: size };
     if (keyword) {
       (params as any).keyword = keyword;
     }
-    return await businessApi.post('/api/permissions/paged', { params });
+    return await businessApi.post('/api/permissions/paged', params);
   },
 
   /**

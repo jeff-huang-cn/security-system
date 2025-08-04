@@ -75,7 +75,6 @@ const requestInterceptor = (config: any) => {
  * 3. 其他错误正常返回，由调用方处理
  */
 const responseInterceptor = (response: any) => {
-  debugger
   // 检查HTTP状态码
   if(response.status !== 200) {
     const error = new Error(response.data?.message || `HTTP错误: ${response.status}`);

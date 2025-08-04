@@ -76,7 +76,7 @@ const UserManagement: React.FC = () => {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      debugger
+    
       const result = await userService.getUsers(pagination.current, pagination.pageSize, searchKeyword);
       // 处理返回结果，适应新的响应格式
       if (result && typeof result === 'object') {
@@ -199,13 +199,6 @@ const UserManagement: React.FC = () => {
   const handleAssignRoles = async (userId: number) => {
     setCurrentUserId(userId);
     try {
-      // 获取用户信息，检查用户状态
-      const user = await userService.getUserById(userId);
-      if (user && user.status === 0) {
-        message.warning('禁用状态的用户不能分配角色，请先启用该用户');
-        return;
-      }
-      
       // 获取用户当前角色
       const userRoles = await userService.getUserRoles(userId);
       // 处理返回的角色数据，确保是角色ID数组

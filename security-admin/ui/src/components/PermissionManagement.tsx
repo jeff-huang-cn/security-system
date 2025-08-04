@@ -33,11 +33,11 @@ const { TextArea } = Input;
 
 interface Permission {
   permissionId: number;
-  permissionName: string;
-  permissionCode: string;
-  permissionType: string;
+  permName: string;  // 注意：后端可能使用permName而不是permissionName
+  permCode: string;  // 注意：后端可能使用permCode而不是permissionCode
+  permType: string;  // 注意：后端可能使用permType而不是permissionType
   parentId: number;
-  path: string;
+  permPath: string;  // 注意：后端可能使用permPath而不是path
   icon: string;
   sortOrder: number;
   status: number;
@@ -66,11 +66,15 @@ const PermissionManagement: React.FC = () => {
       // 使用新的 getAllPermissions 方法获取所有权限
       const result = await permissionService.getAllPermissions();
       
+      debugger
       // 确保结果是数组
       const permissionList: Permission[] = Array.isArray(result) ? result : [];
       
+      console.log('获取到的权限列表:', permissionList);
+      
       // 构建树形结构
       const tree = buildPermissionTree(permissionList);
+      console.log('构建的权限树:', tree);
       setPermissions(tree);
       
       // 构建TreeSelect数据
@@ -121,10 +125,10 @@ const PermissionManagement: React.FC = () => {
       children: []
     });
 
-    // 创建节点映射
+          // 创建节点映射
     permissions.forEach(permission => {
       map[permission.permissionId] = {
-        title: permission.permissionName,
+        title: permission.permName,
         value: permission.permissionId,
         key: permission.permissionId,
         children: []
@@ -152,11 +156,11 @@ const PermissionManagement: React.FC = () => {
   const handleEdit = (permission: Permission) => {
     setEditingPermission(permission);
     form.setFieldsValue({
-      permissionName: permission.permissionName,
-      permissionCode: permission.permissionCode,
-      permissionType: permission.permissionType,
+      permissionName: permission.permName,
+      permissionCode: permission.permCode,
+      permissionType: permission.permType,
       parentId: permission.parentId,
-      path: permission.path,
+      path: permission.permPath,
       icon: permission.icon,
       sortOrder: permission.sortOrder,
       status: permission.status
@@ -236,34 +240,34 @@ const PermissionManagement: React.FC = () => {
   const columns = [
     {
       title: '权限名称',
-      dataIndex: 'permissionName',
-      key: 'permissionName',
+      dataIndex: 'permName',
+      key: 'permName',
       width: 200,
       render: (text: string, record: Permission) => (
         <Space>
-          {getPermissionIcon(record.permissionType)}
+          {getPermissionIcon(record.permType)}
           {text}
         </Space>
       ),
     },
     {
       title: '权限编码',
-      dataIndex: 'permissionCode',
-      key: 'permissionCode',
+      dataIndex: 'permCode',
+      key: 'permCode',
       width: 150,
       render: (text: string) => <Tag color="purple">{text}</Tag>,
     },
     {
       title: '权限类型',
-      dataIndex: 'permissionType',
-      key: 'permissionType',
+      dataIndex: 'permType',
+      key: 'permType',
       width: 100,
       render: (type: string) => getPermissionTypeTag(type),
     },
     {
       title: '路径',
-      dataIndex: 'path',
-      key: 'path',
+      dataIndex: 'permPath',
+      key: 'permPath',
       width: 150,
       ellipsis: true,
     },

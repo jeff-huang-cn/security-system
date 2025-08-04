@@ -43,11 +43,11 @@ interface Role {
 
 interface Permission {
   permissionId: number;
-  permissionName: string;
-  permissionCode: string;
-  permissionType: string;
+  permName: string;
+  permCode: string;
+  permType: string;
   parentId: number;
-  path: string;
+  permPath: string;
   children?: Permission[];
 }
 
@@ -127,10 +127,12 @@ const RoleManagement: React.FC = () => {
       const permissionList = await permissionService.getAllPermissions();
       // 确保结果是数组
       const permissions: Permission[] = Array.isArray(permissionList) ? permissionList : [];
+      console.log('角色管理-获取到的权限列表:', permissions);
       setPermissions(permissions);
       
       // 构建权限树
       const tree = buildPermissionTree(permissions);
+      console.log('角色管理-构建的权限树:', tree);
       setPermissionTree(tree);
     } catch (error) {
       message.error('加载权限列表失败');
@@ -146,7 +148,7 @@ const RoleManagement: React.FC = () => {
     permissions.forEach(permission => {
       map[permission.permissionId] = {
         key: permission.permissionId,
-        title: permission.permissionName,
+        title: permission.permName,
         value: permission.permissionId,
         children: []
       };
@@ -473,15 +475,32 @@ const RoleManagement: React.FC = () => {
 
       {/* 权限分配模态框 */}
       <Modal
-        title="分配权限"
+        title={<div style={{ borderBottom: '1px solid #f0f0f0', paddingBottom: 10, fontSize: 16, fontWeight: 500 }}>分配权限</div>}
         open={showPermissionModal}
         onOk={handleSavePermissions}
         onCancel={() => setShowPermissionModal(false)}
         okText="保存"
         cancelText="取消"
-        width={500}
+        width={700}
+        centered
+        bodyStyle={{ padding: '10px 24px 12px' }}
+        okButtonProps={{ style: { borderRadius: 4 } }}
+        cancelButtonProps={{ style: { borderRadius: 4 } }}
       >
-        <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+        <div style={{ marginBottom: 16 }}>
+          <span style={{ color: '#666', fontSize: 14 }}>请为该角色选择权限：</span>
+        </div>
+        <div 
+          style={{ 
+            maxHeight: 400, 
+            overflowY: 'auto', 
+            overflowX: 'hidden',
+            padding: '12px',
+            background: '#f9f9f9',
+            borderRadius: 6,
+            marginTop: 5
+          }}
+        >
           <Tree
             checkable
             checkedKeys={selectedPermissions}

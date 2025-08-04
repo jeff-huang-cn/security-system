@@ -43,3 +43,4 @@ logging:
   level:
     com.webapp.security: DEBUG
     org.springframework.security: DEBUG
+    com.baomidou.mybatisplus: DEBUG
