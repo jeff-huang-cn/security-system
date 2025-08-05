@@ -1,5 +1,6 @@
-import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { authService } from './authService';
+import { TokenManager } from './tokenManager';
 
 // ===== API实例创建和配置 =====
 /**
@@ -32,7 +33,7 @@ authApi.interceptors.request.use((config: any) => {
  * 用途：处理所有业务相关的请求（用户管理、角色管理、权限管理等）
  * 特点：
  * 1. 自动添加Authorization头
- * 2. 处理401错误并跳转到登录页
+ * 2. 处理401错误并自动刷新token
  * 3. 提供无感知的用户体验
  */
 export const businessApi: AxiosInstance = axios.create({
@@ -42,39 +43,81 @@ export const businessApi: AxiosInstance = axios.create({
     'Content-Type': 'application/json',
   },
 });
-  
+
+// 简化后不再需要这些变量和函数
+// 只需要一个简单的标志来防止短时间内重复刷新
+let tokenRefreshTriggered = false;
+// 防抖计时器
+let tokenRefreshDebounceTimer: NodeJS.Timeout | null = null;
+
 // ===== 请求拦截器配置 =====
 /**
  * 请求拦截器：自动添加Authorization头
+ * 并在token即将过期时刷新（只由一个请求触发，其他请求不受影响）
  * 
- * 执行流程：
- * 1. 从localStorage获取access_token
- * 2. 如果token存在，自动添加到请求头的Authorization字段
- * 3. 使用Bearer token格式：'Bearer <access_token>'
+ * 优化: 
+ * 1. 同一用户的并发请求中，只有第一个请求会触发刷新
+ * 2. 其他请求继续使用旧但仍有效的token，不会等待刷新完成
  */
-const requestInterceptor = (config: any) => {
-  const token = localStorage.getItem('access_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-    console.log('Adding Authorization header to request');
+const requestInterceptor = async (config: any) => {
+  // 如果是认证API的请求，直接返回配置
+  if (config._isAuthApi) {
+    return config;
   }
+  
+  // 每次请求都重新获取最新token，确保使用的是最新刷新的token
+  const latestToken = TokenManager.getAccessToken();
+  if (latestToken) {
+    config.headers.Authorization = `Bearer ${latestToken}`;
+    console.log(`【请求】使用token: ${latestToken}`);
+  }
+  // 检查是否需要刷新token（标志位优先判断，提高执行效率）
+  if (!tokenRefreshTriggered && TokenManager.isAuthenticated() && TokenManager.isTokenExpiringSoon()) {
+    // 设置防抖标志，5秒内不会重复刷新
+    tokenRefreshTriggered = true;
+    
+    // 清除之前的定时器
+    if (tokenRefreshDebounceTimer) {
+      clearTimeout(tokenRefreshDebounceTimer);
+    }
+    
+    // 5秒后重置防抖标志
+    tokenRefreshDebounceTimer = setTimeout(() => {
+      tokenRefreshTriggered = false;
+      tokenRefreshDebounceTimer = null;
+    }, 5000);
+    
+    console.log('Token is expiring soon, triggering background refresh');
+    
+    // 在后台刷新token，不阻塞当前请求
+    authService.refreshToken()
+      .then(response => {
+        console.log('Token refreshed successfully in background');
+        
+        // 强制重置防抖标志，表明刷新已完成，其他请求可以使用新token
+        tokenRefreshTriggered = false;
+        
+        // 清除之前的定时器
+        if (tokenRefreshDebounceTimer) {
+          clearTimeout(tokenRefreshDebounceTimer);
+          tokenRefreshDebounceTimer = null;
+        }
+      })
+      .catch(error => {
+        console.error('Background token refresh failed:', error);
+        // 刷新失败不影响当前请求，因为旧token仍然有效
+      });
+  }
+  
+  // 无论刷新是否触发，都直接返回请求配置
   return config;
 };
 
 // ===== 响应错误拦截器配置 =====
 /**
- * 响应错误拦截器：处理401错误
- * 
- * 设计用意：
- * 1. 当API返回401错误时，直接跳转到登录页
- * 2. 简化错误处理逻辑，提高可维护性
- * 
- * 执行流程：
- * 1. 检查错误状态码是否为401
- * 2. 如果是401，清除本地token并跳转到登录页
- * 3. 其他错误正常返回，由调用方处理
+ * 响应拦截器：处理返回数据
  */
-const responseInterceptor = (response: any) => {
+const responseInterceptor = (response: any) => {  
   // 检查HTTP状态码
   if(response.status !== 200) {
     const error = new Error(response.data?.message || `HTTP错误: ${response.status}`);
@@ -103,27 +146,94 @@ const responseInterceptor = (response: any) => {
   return response.data;
 };
 
+/**
+ * 响应错误拦截器：处理401错误并自动刷新token
+ */
 const responseErrorInterceptor = async (error: any) => {
+  // 获取原始请求配置
+  const originalRequest = error.config;
+  
   // 处理HTTP错误
   if (error.response) {
     const { status } = error.response;
     
-    // 处理401错误 - 未授权
-    if (status === 401) {
-      console.log('Unauthorized access detected (401), redirecting to login page');
-      
-      // 清除本地token
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('token_expiry');
-      
-      // 跳转到登录页
-      window.location.href = '/login';
+          // 处理401错误 - 未授权
+      if (status === 401) {
+        // 如果是认证API的请求，不进行刷新尝试
+        if (originalRequest._isAuthApi) {
+          console.log('Auth API request unauthorized (401), redirecting to login page');
+          TokenManager.clearTokens();
+          window.location.href = '/login';
+          return Promise.reject(error);
+        }
+        
+        // 如果请求已经重试过一次，不要继续刷新，直接清除token并跳转登录
+        if (originalRequest._retry) {
+          console.log('已重试过请求但仍失败(401)，清除token并跳转登录');
+          TokenManager.clearTokens();
+          window.location.href = '/login';
+          return Promise.reject(error);
+        }
+        
+        console.log('Request unauthorized (401), attempting to refresh token');
+        
+        // 标记请求已经重试过，避免无限循环
+        originalRequest._retry = true;
+        
+        try {
+          // 刷新token
+          const response = await authService.refreshToken();
+          
+          // 刷新成功后立即重置标志，避免其他请求重复刷新
+          tokenRefreshTriggered = false;
+          if (tokenRefreshDebounceTimer) {
+            clearTimeout(tokenRefreshDebounceTimer);
+            tokenRefreshDebounceTimer = null;
+          }
+          
+          // 更新失败请求的Authorization头，总是使用最新的token
+          const newToken = TokenManager.getAccessToken(); // 从TokenManager获取刷新后的token
+          if (!newToken) {
+            throw new Error('Failed to get new token after refresh');
+          }
+          
+          // 设置新的认证头
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          console.log(`【重试】使用新token: ${newToken}`);
+          
+          // 确保其他可能的配置都是最新的
+          
+          // 重新发送原始请求
+          console.log('Token refreshed, retrying original request');
+          return axios(originalRequest);
+        } catch (refreshError) {
+          console.error('Token refresh failed during 401 handling:', refreshError);
+          
+          // 如果刷新token失败，清除token并跳转到登录页
+          TokenManager.clearTokens();
+          window.location.href = '/login';
+          
+          return Promise.reject(refreshError);
+        }
     } 
     // 处理403错误 - 禁止访问
     else if (status === 403) {
       console.log('Access forbidden (403)');
       // 可以显示无权限提示或跳转到无权限页面
+    }
+    // 处理400错误 - 可能是因为token问题
+    else if (status === 400) {
+      console.log('Bad request (400) - may be due to token issues:', error);
+      
+      // 如果错误消息表明与token相关，可以尝试刷新或直接登出
+      const errorMessage = error.response?.data?.message || '';
+      if (errorMessage.toLowerCase().includes('token') || 
+          errorMessage.toLowerCase().includes('auth') || 
+          errorMessage.toLowerCase().includes('unauthorized')) {
+        console.log('Token可能无效，尝试清除并跳转登录页');
+        TokenManager.clearTokens();
+        window.location.href = '/login';
+      }
     }
     // 处理404错误 - 资源不存在
     else if (status === 404) {
@@ -139,6 +249,42 @@ const responseErrorInterceptor = async (error: any) => {
   } else {
     // 请求配置出错
     console.log('Request error:', error.message);
+    
+    // 检查是否与token相关的错误
+    if (error.code === 'ERR_BAD_REQUEST' && !error._tokenErrorHandled) {
+      console.log('ERR_BAD_REQUEST可能是token问题，尝试刷新token后重试一次');
+      error._tokenErrorHandled = true;
+      
+      // 获取原始请求
+      const originalRequest = error.config;
+      
+      // 避免无限循环
+      if (!originalRequest._badRequestRetried) {
+        originalRequest._badRequestRetried = true;
+        
+        try {
+          // 尝试刷新token
+          console.log('尝试刷新token后重新发送请求');
+          const refreshResponse = await authService.refreshToken();
+          
+          // 使用新token重试
+          const newToken = TokenManager.getAccessToken();
+          if (newToken) {
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            return axios(originalRequest);
+          }
+        } catch (refreshError) {
+          console.error('Token刷新失败，跳转到登录页:', refreshError);
+          TokenManager.clearTokens();
+          window.location.href = '/login';
+        }
+      } else {
+        // 如果已经尝试过一次，就清除token并重定向
+        console.log('多次尝试失败，可能是token无效，跳转到登录页');
+        TokenManager.clearTokens();
+        window.location.href = '/login';
+      }
+    }
   }
 
   return Promise.reject(error);

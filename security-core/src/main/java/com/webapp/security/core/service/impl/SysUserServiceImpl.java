@@ -2,7 +2,6 @@ package com.webapp.security.core.service.impl;
 
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.digest.BCrypt;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.webapp.security.core.entity.SysUser;
 import com.webapp.security.core.entity.SysUserRole;
@@ -11,17 +10,21 @@ import com.webapp.security.core.mapper.SysUserMapper;
 import com.webapp.security.core.mapper.SysUserRoleMapper;
 import com.webapp.security.core.service.SysUserService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
+import com.google.common.collect.*;
 
 /**
- * 系统用户服务实现�? */
+ * 系统用户服务实现类
+ */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> implements SysUserService {
 
     private final SysUserRoleMapper userRoleMapper;
@@ -116,7 +119,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         if (StrUtil.isNotBlank(user.getPhone()) && !user.getPhone().equals(existingUser.getPhone())) {
             SysUser userByPhone = getByPhone(user.getPhone());
             if (userByPhone != null && !userByPhone.getUserId().equals(user.getUserId())) {
-                throw UserBizExceptionBuilder.phoneAlreadyExists( "手机号已被其他用户使用");
+                throw UserBizExceptionBuilder.phoneAlreadyExists("手机号已被其他用户使用");
             }
         }
 
@@ -190,17 +193,23 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 
         // 添加新的角色关联
         if (roleIds != null && !roleIds.isEmpty()) {
-            List<SysUserRole> userRoles = roleIds.stream()
-                    .map(roleId -> {
-                        SysUserRole userRole = new SysUserRole();
-                        userRole.setUserId(userId);
-                        userRole.setRoleId(roleId);
-                        userRole.setCreateTime(LocalDateTime.now());
-                        return userRole;
-                    })
-                    .collect(Collectors.toList());
-
-            return userRoleMapper.batchInsert(userRoles) > 0;
+            List<List<Long>> partitionedRoleIds = Lists.partition(roleIds, 1000);
+            for (List<Long> partitionedRoleId : partitionedRoleIds) {
+                List<SysUserRole> userRoles = partitionedRoleId.stream()
+                        .map(roleId -> {
+                            SysUserRole userRole = new SysUserRole();
+                            userRole.setUserId(userId);
+                            userRole.setRoleId(roleId);
+                            userRole.setCreateTime(LocalDateTime.now());
+                            return userRole;
+                        })
+                        .collect(Collectors.toList());
+                int insertCount = userRoleMapper.batchInsert(userRoles);
+                if (insertCount != partitionedRoleId.size()) {
+                    log.error("批量插入用户角色失败, 用户ID: {}, 批次: {}/{}, 插入条数: {}", userId, (partitionedRoleIds.indexOf(partitionedRoleId) + 1),
+                            partitionedRoleIds.size(), insertCount);
+                }
+            }
         }
 
         return true;
@@ -262,4 +271,3 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         }
     }
 }
-

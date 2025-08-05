@@ -1,6 +1,7 @@
 package com.webapp.security.core.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.webapp.security.core.entity.SysPermission;
 import com.webapp.security.core.entity.SysRole;
 
 import java.util.List;
@@ -46,6 +47,11 @@ public interface SysRoleService extends IService<SysRole> {
     List<String> getRolePermissions(Long roleId);
 
     /**
+     * 获取角色权限对象列表
+     */
+    List<SysPermission> getRolePermissionVOs(Long roleId);
+
+    /**
      * 根据用户ID获取用户角色列表
      */
     List<SysRole> getUserRoles(Long userId);
@@ -55,4 +61,3 @@ public interface SysRoleService extends IService<SysRole> {
      */
     List<SysRole> getEnabledRoles();
 }
-

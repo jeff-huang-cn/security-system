@@ -23,14 +23,20 @@ export class TokenManager {
     if (expiresIn && !isNaN(expiresIn)) {
       // 确保 expiresIn 是一个正数
       const validExpiresIn = Math.max(0, expiresIn);
-      const expiryTime = Date.now() + (validExpiresIn * 1000);
+      
+      // 添加时间缓冲，将过期时间提前100秒，以处理服务器和客户端时间差异
+      const bufferTime = 100; // 缓冲时间（秒）
+      const adjustedExpiresIn = Math.max(0, validExpiresIn - bufferTime);
+      
+      const expiryTime = Date.now() + (adjustedExpiresIn * 1000);
       localStorage.setItem(this.TOKEN_EXPIRY_KEY, expiryTime.toString());
-      console.log(`Token will expire at: ${new Date(expiryTime).toLocaleString()} (in ${validExpiresIn} seconds)`);
+      
+      console.log(`Token will expire at: ${new Date(expiryTime).toLocaleString()} (in ${adjustedExpiresIn} seconds, with ${bufferTime}s buffer)`);
     } else {
-      // 如果没有提供有效的过期时间，使用默认值（30分钟）
-      const defaultExpiry = Date.now() + (30 * 60 * 1000);
+      // 如果没有提供有效的过期时间，使用默认值（30分钟 - 缓冲时间）
+      const defaultExpiry = Date.now() + ((30 * 60 - 100) * 1000); // 30分钟减去100秒缓冲
       localStorage.setItem(this.TOKEN_EXPIRY_KEY, defaultExpiry.toString());
-      console.log(`Using default expiry time: ${new Date(defaultExpiry).toLocaleString()} (in 30 minutes)`);
+      console.log(`Using default expiry time: ${new Date(defaultExpiry).toLocaleString()} (in 30 minutes with buffer)`);
     }
   }
 
@@ -64,10 +70,13 @@ export class TokenManager {
     
     const now = Date.now();
     const fiveMinutes = 5 * 60 * 1000; // 5分钟
+    const timeRemaining = expiry - now;
     
-    const isExpiring = (expiry - now) <= fiveMinutes;
+    // 只有当剩余时间小于5分钟且大于0时才需要刷新
+    // 避免刚登录就触发刷新
+    const isExpiring = timeRemaining <= fiveMinutes && timeRemaining > 0;
     if (isExpiring) {
-      console.log(`Token is expiring soon. Expires at: ${new Date(expiry).toLocaleString()}, now: ${new Date(now).toLocaleString()}`);
+      console.log(`Token is expiring soon. Expires at: ${new Date(expiry).toLocaleString()}, now: ${new Date(now).toLocaleString()}, remaining: ${Math.round(timeRemaining/1000)}s`);
     }
     return isExpiring;
   }

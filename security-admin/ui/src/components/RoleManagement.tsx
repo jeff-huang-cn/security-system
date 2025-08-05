@@ -77,6 +77,37 @@ const RoleManagement: React.FC = () => {
     loadRoles();
     loadPermissions();
   }, [pagination.current, pagination.pageSize, searchKeyword]);
+  
+  // 监听权限模态框状态变化
+  useEffect(() => {
+    if (showPermissionModal && currentRoleId) {
+      // 确保模态框显示时权限树数据已加载
+      if (permissions.length === 0 || permissionTree.length === 0) {
+        console.log('模态框打开，但权限数据为空，重新加载权限');
+        loadPermissions().then(() => {
+          // 权限加载完成后再次获取角色权限
+          refreshRolePermissions(currentRoleId);
+        });
+      }
+    }
+  }, [showPermissionModal]);
+  
+  // 刷新角色的权限
+  const refreshRolePermissions = async (roleId: number) => {
+    if (!roleId) return;
+    
+    try {
+      const rolePermissions = await roleService.getRolePermissions(roleId);
+      const permissionsList: Permission[] = Array.isArray(rolePermissions) ? rolePermissions : [];
+      console.log('刷新获取到的角色权限:', permissionsList);
+      
+      const selectedIds = permissionsList.map(permission => permission.permissionId);
+      console.log('刷新选中的权限ID:', selectedIds);
+      setSelectedPermissions(selectedIds);
+    } catch (error) {
+      console.error('刷新角色权限失败:', error);
+    }
+  };
 
   const loadRoles = async () => {
     setLoading(true);
@@ -134,13 +165,20 @@ const RoleManagement: React.FC = () => {
       const tree = buildPermissionTree(permissions);
       console.log('角色管理-构建的权限树:', tree);
       setPermissionTree(tree);
+      return permissions; // 返回权限列表，方便外部使用
     } catch (error) {
       message.error('加载权限列表失败');
       console.error('加载权限列表失败:', error);
+      return [];
     }
   };
 
   const buildPermissionTree = (permissions: Permission[]) => {
+    if (!permissions || permissions.length === 0) {
+      console.warn('没有权限数据可构建树');
+      return [];
+    }
+    
     const tree: any[] = [];
     const map: { [key: number]: any } = {};
 
@@ -148,7 +186,7 @@ const RoleManagement: React.FC = () => {
     permissions.forEach(permission => {
       map[permission.permissionId] = {
         key: permission.permissionId,
-        title: permission.permName,
+        title: `${permission.permName} (${permission.permCode})`,
         value: permission.permissionId,
         children: []
       };
@@ -160,10 +198,32 @@ const RoleManagement: React.FC = () => {
         tree.push(map[permission.permissionId]);
       } else if (map[permission.parentId]) {
         map[permission.parentId].children.push(map[permission.permissionId]);
+      } else {
+        // 如果找不到父节点，将其作为顶级节点
+        console.warn(`找不到权限 ${permission.permissionId}(${permission.permName}) 的父节点 ${permission.parentId}，作为顶级节点处理`);
+        tree.push(map[permission.permissionId]);
       }
     });
-
-    return tree;
+    
+    // 移除空的children数组
+    const cleanupEmptyChildren = (nodes: any[]): any[] => {
+      return nodes.map(node => {
+        if (node.children && node.children.length === 0) {
+          const { children, ...rest } = node;
+          return rest;
+        } else if (node.children && node.children.length > 0) {
+          return {
+            ...node,
+            children: cleanupEmptyChildren(node.children)
+          };
+        }
+        return node;
+      });
+    };
+    
+    const cleanedTree = cleanupEmptyChildren(tree);
+    console.log('清理后的权限树:', cleanedTree);
+    return cleanedTree;
   };
 
   const handleCreate = () => {
@@ -235,10 +295,22 @@ const RoleManagement: React.FC = () => {
   const handleAssignPermissions = async (roleId: number) => {
     setCurrentRoleId(roleId);
     try {
+      // 先加载所有权限数据
+      const allPermissions = await loadPermissions();
+      console.log('所有权限数据:', allPermissions);
+      
+      // 再获取角色已分配的权限
       const rolePermissions = await roleService.getRolePermissions(roleId);
       // 确保返回的是数组
       const permissionsList: Permission[] = Array.isArray(rolePermissions) ? rolePermissions : [];
-      setSelectedPermissions(permissionsList.map(permission => permission.permissionId));
+      console.log('获取到的角色权限:', permissionsList);
+      
+      // 设置已选中权限ID列表
+      const selectedIds = permissionsList.map(permission => permission.permissionId);
+      console.log('选中的权限ID:', selectedIds);
+      setSelectedPermissions(selectedIds);
+      
+      // 显示模态框
       setShowPermissionModal(true);
     } catch (error) {
       message.error('获取角色权限失败');
@@ -247,16 +319,32 @@ const RoleManagement: React.FC = () => {
   };
 
   const handleSavePermissions = async () => {
-    if (currentRoleId) {
-      try {
+    if (!currentRoleId) {
+      message.warning('未选择角色，无法保存权限');
+      return;
+    }
+    
+    try {
+      console.log('保存权限，角色ID:', currentRoleId, '选中权限IDs:', selectedPermissions);
+      
+      // 确保selectedPermissions包含有效的权限ID
+      if (selectedPermissions && selectedPermissions.length > 0) {
         await roleService.assignRolePermissions(currentRoleId, selectedPermissions);
         message.success('权限分配成功');
         setShowPermissionModal(false);
+        
+        // 重新加载角色列表以更新UI显示
         loadRoles();
-      } catch (error) {
-        message.error('权限分配失败');
-        console.error('分配权限失败:', error);
+      } else {
+        // 处理清空权限的情况
+        await roleService.assignRolePermissions(currentRoleId, []);
+        message.success('已清空该角色的所有权限');
+        setShowPermissionModal(false);
+        loadRoles();
       }
+    } catch (error) {
+      message.error('权限分配失败');
+      console.error('分配权限失败:', error);
     }
   };
 
@@ -481,9 +569,9 @@ const RoleManagement: React.FC = () => {
         onCancel={() => setShowPermissionModal(false)}
         okText="保存"
         cancelText="取消"
-        width={700}
+        width={800}
         centered
-        bodyStyle={{ padding: '10px 24px 12px' }}
+        bodyStyle={{ padding: '10px 24px 12px', maxHeight: '80vh', overflowY: 'auto' }}
         okButtonProps={{ style: { borderRadius: 4 } }}
         cancelButtonProps={{ style: { borderRadius: 4 } }}
       >
@@ -492,7 +580,7 @@ const RoleManagement: React.FC = () => {
         </div>
         <div 
           style={{ 
-            maxHeight: 400, 
+            maxHeight: 500, // 从400增加到500
             overflowY: 'auto', 
             overflowX: 'hidden',
             padding: '12px',
@@ -504,7 +592,24 @@ const RoleManagement: React.FC = () => {
           <Tree
             checkable
             checkedKeys={selectedPermissions}
-            onCheck={(checkedKeys: any) => setSelectedPermissions(checkedKeys)}
+            onCheck={(checkedKeys: any) => {
+              console.log('Tree选中变化:', checkedKeys);
+              
+              // 标准化处理选中的keys
+              let selectedKeys: number[] = [];
+              if (checkedKeys && typeof checkedKeys === 'object' && 'checked' in checkedKeys) {
+                selectedKeys = checkedKeys.checked.map((key: any) => 
+                  typeof key === 'string' ? parseInt(key, 10) : key
+                );
+              } else if (Array.isArray(checkedKeys)) {
+                selectedKeys = checkedKeys.map((key: any) => 
+                  typeof key === 'string' ? parseInt(key, 10) : key
+                );
+              }
+              
+              console.log('处理后的选中keys:', selectedKeys);
+              setSelectedPermissions(selectedKeys);
+            }}
             treeData={permissionTree}
             defaultExpandAll
           />

@@ -36,6 +36,7 @@
         <jwt.version>0.11.5</jwt.version>
         <hutool.version>5.8.20</hutool.version>
         <druid.version>1.2.18</druid.version>
+        <guava.version>33.4.8-jre</guava.version>
     </properties>
 
     <dependencyManagement>
@@ -91,7 +92,11 @@
                 <artifactId>hutool-all</artifactId>
                 <version>${hutool.version}</version>
             </dependency>
-
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>${guava.version}</version>
+            </dependency>
             <!-- Druid -->
             <dependency>
                 <groupId>com.alibaba</groupId>

@@ -3,16 +3,12 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'r
 import Dashboard from './components/Dashboard';
 import Login from './components/Login';
 import { authService } from './services/authService';
-import { TokenRefresher } from './services/tokenRefresher';
 
 function App() {
   const [user, setUser] = useState<any>(null);
   
-  // 组件挂载时初始化TokenRefresher
+  // 组件挂载时检查用户登录状态
   useEffect(() => {
-    // 初始化Token自动刷新机制
-    TokenRefresher.initialize();
-    
     // 检查用户是否已登录
     if (authService.isAuthenticated()) {
       // 从本地存储获取用户信息，或设置默认值
@@ -27,11 +23,6 @@ function App() {
         setUser({ username: 'admin' }); // 默认用户
       }
     }
-    
-    // 组件卸载时停止刷新循环
-    return () => {
-      TokenRefresher.stopRefreshCycle();
-    };
   }, []);
   
   // 处理登录成功

@@ -48,10 +48,14 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- 工具�?-->
+        <!-- 工具 -->
         <dependency>
             <groupId>cn.hutool</groupId>
             <artifactId>hutool-all</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
         </dependency>
 
         <!-- Spring Security -->

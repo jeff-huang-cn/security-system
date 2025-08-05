@@ -9,9 +9,12 @@ import com.webapp.security.admin.controller.role.dto.RoleUpdateDTO;
 import com.webapp.security.admin.controller.user.dto.StatusDTO;
 import com.webapp.security.admin.controller.role.vo.RoleVO;
 import com.webapp.security.admin.controller.user.vo.UserVO;
+import com.webapp.security.admin.controller.permission.vo.PermissionVO;
 import com.webapp.security.admin.converter.RoleConverter;
+import com.webapp.security.admin.converter.PermissionConverter;
 import com.webapp.security.core.entity.SysRole;
 import com.webapp.security.core.entity.SysUser;
+import com.webapp.security.core.entity.SysPermission;
 import com.webapp.security.core.model.PagedDTO;
 import com.webapp.security.core.model.PagedResult;
 import com.webapp.security.core.model.ResponseResult;
@@ -33,6 +36,7 @@ public class RoleController {
 
     private final SysRoleService roleService;
     private final RoleConverter roleConverter;
+    private final PermissionConverter permissionConverter;
 
     @PostMapping("/paged")
     @PreAuthorize("hasAuthority('ROLE_QUERY')")
@@ -134,9 +138,9 @@ public class RoleController {
      */
     @GetMapping("/{id}/permissions")
     @PreAuthorize("hasAuthority('ROLE_QUERY')")
-    public ResponseResult<List<String>> getRolePermissions(@PathVariable Long id) {
-        List<String> permissions = roleService.getRolePermissions(id);
-        return ResponseResult.success(permissions);
+    public ResponseResult<List<PermissionVO>> getRolePermissions(@PathVariable Long id) {
+        List<SysPermission> permissions = roleService.getRolePermissionVOs(id);
+        return ResponseResult.success(permissionConverter.toVOList(permissions));
     }
 
     /**

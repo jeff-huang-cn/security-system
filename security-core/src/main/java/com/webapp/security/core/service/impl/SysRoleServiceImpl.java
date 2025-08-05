@@ -3,6 +3,8 @@ package com.webapp.security.core.service.impl;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.google.common.collect.Lists;
+import com.webapp.security.core.entity.SysPermission;
 import com.webapp.security.core.entity.SysRole;
 import com.webapp.security.core.entity.SysRolePermission;
 import com.webapp.security.core.exception.BizException;
@@ -11,6 +13,7 @@ import com.webapp.security.core.mapper.SysRolePermissionMapper;
 import com.webapp.security.core.mapper.SysUserRoleMapper;
 import com.webapp.security.core.service.SysRoleService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +26,7 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> implements SysRoleService {
 
     private final SysRolePermissionMapper rolePermissionMapper;
@@ -131,17 +135,23 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
 
         // 添加新的权限关联
         if (permissionIds != null && !permissionIds.isEmpty()) {
-            List<SysRolePermission> rolePermissions = permissionIds.stream()
-                    .map(permissionId -> {
-                        SysRolePermission rolePermission = new SysRolePermission();
-                        rolePermission.setRoleId(roleId);
-                        rolePermission.setPermissionId(permissionId);
-                        rolePermission.setCreateTime(LocalDateTime.now());
-                        return rolePermission;
-                    })
-                    .collect(Collectors.toList());
-
-            return rolePermissionMapper.batchInsert(rolePermissions) > 0;
+            List<List<Long>> partitionedPermissionIds = Lists.partition(permissionIds, 1000);
+            for (List<Long> partitionedPermissionId : partitionedPermissionIds) {
+                List<SysRolePermission> rolePermissions = partitionedPermissionId.stream()
+                        .map(permissionId -> {
+                            SysRolePermission rolePermission = new SysRolePermission();
+                            rolePermission.setRoleId(roleId);
+                            rolePermission.setPermissionId(permissionId);
+                            rolePermission.setCreateTime(LocalDateTime.now());
+                            return rolePermission;
+                        })
+                        .collect(Collectors.toList());
+                int insertCount = rolePermissionMapper.batchInsert(rolePermissions);
+                if (insertCount != partitionedPermissionId.size()) {
+                    log.error("批量插入角色权限关联失败, 角色ID: {}, 批次: {}/{}, 插入条数: {}", roleId, (partitionedPermissionIds.indexOf(partitionedPermissionId) + 1),
+                            partitionedPermissionIds.size(), insertCount);
+                }
+            }
         }
 
         return true;
@@ -153,6 +163,14 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
             return null;
         }
         return baseMapper.selectRolePermissions(roleId);
+    }
+
+    @Override
+    public List<SysPermission> getRolePermissionVOs(Long roleId) {
+        if (roleId == null) {
+            return null;
+        }
+        return baseMapper.selectRolePermissionDetails(roleId);
     }
 
     @Override

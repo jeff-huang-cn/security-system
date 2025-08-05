@@ -1,9 +1,20 @@
+/**
+ * @deprecated 该文件已被废弃，不再使用
+ * 
+ * 新的token刷新机制已经移到api.ts中，通过axios拦截器实现：
+ * 1. 请求拦截器 - 检查token是否即将过期，在发送请求前刷新
+ * 2. 响应拦截器 - 处理401错误，自动刷新token并重试请求
+ * 
+ * 这种基于拦截器的方式提供了更好的无感刷新体验，避免了定时器的问题。
+ */
+
 import { authService } from './authService';
 import { TokenManager } from './tokenManager';
 
 /**
  * Token自动刷新管理器
  * 提供Token的自动刷新功能，避免用户会话中断
+ * @deprecated 已被api.ts中的拦截器方案取代
  */
 export class TokenRefresher {
   private static refreshTimeout: NodeJS.Timeout | null = null;
@@ -11,8 +22,12 @@ export class TokenRefresher {
   
   /**
    * 初始化Token刷新机制
+   * @deprecated 已被api.ts中的拦截器方案取代
    */
   static initialize(): void {
+    console.warn('TokenRefresher.initialize() is deprecated. Using interceptor-based refresh mechanism instead.');
+    
+    // 原实现保持不变，但实际上不再使用
     // 清除可能存在的旧定时器
     this.stopRefreshCycle();
     
@@ -35,8 +50,11 @@ export class TokenRefresher {
   
   /**
    * 停止Token刷新循环
+   * @deprecated 已被api.ts中的拦截器方案取代
    */
   static stopRefreshCycle(): void {
+    console.warn('TokenRefresher.stopRefreshCycle() is deprecated. Using interceptor-based refresh mechanism instead.');
+    
     if (this.refreshTimeout) {
       clearTimeout(this.refreshTimeout);
       this.refreshTimeout = null;
