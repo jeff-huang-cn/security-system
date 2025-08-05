@@ -47,17 +47,17 @@ public class SecurityExceptionHandler implements AuthenticationEntryPoint, Acces
     /**
      * 处理授权异常
      * 当用户已登录但没有足够权限时触发
-     * 我们也将其转换为401响应，以便前端统一处理
+     * 返回403状态码并提供明确的错误信息
      */
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response,
             AccessDeniedException accessDeniedException) throws IOException, ServletException {
         log.error("授权异常: {}", accessDeniedException.getMessage(), accessDeniedException);
 
-        ResponseResult<Object> result = ResponseResult.failed("unauthorized", "权限不足或登录已过期，请重新登录");
+        ResponseResult<Object> result = ResponseResult.failed("access_denied", "您没有权限执行此操作");
 
-        // 将403转换为401，以便前端统一处理
-        response.setStatus(HttpStatus.UNAUTHORIZED.value());
+        // 保持403状态码，与401区分开
+        response.setStatus(HttpStatus.FORBIDDEN.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding("UTF-8");
         response.getWriter().write(objectMapper.writeValueAsString(result));

@@ -156,8 +156,8 @@ const responseErrorInterceptor = async (error: any) => {
   // 处理HTTP错误
   if (error.response) {
     const { status } = error.response;
-    
-          // 处理401错误 - 未授权
+      debugger
+      // 处理401错误 - 未授权
       if (status === 401) {
         // 如果是认证API的请求，不进行刷新尝试
         if (originalRequest._isAuthApi) {
@@ -216,10 +216,30 @@ const responseErrorInterceptor = async (error: any) => {
           return Promise.reject(refreshError);
         }
     } 
-    // 处理403错误 - 禁止访问
+    // 处理403错误 - 权限不足
     else if (status === 403) {
-      console.log('Access forbidden (403)');
-      // 可以显示无权限提示或跳转到无权限页面
+      console.log('Access forbidden (403): 权限不足');
+      
+      // 获取错误信息
+      const errorMsg = error.response?.data?.message || '您没有权限执行此操作';
+      
+      // 显示友好的错误提示，但不跳转登录页
+      // 使用antd全局消息提示
+      const { message } = await import('antd');
+      message.error({
+        content: errorMsg,
+        duration: 3,
+        style: {
+          marginTop: '20vh',
+        }
+      });
+      
+      // 返回被拒绝的Promise，让调用者可以处理
+      return Promise.reject({
+        ...error,
+        handledByInterceptor: true, // 标记为已处理
+        errorType: 'permission_denied' // 权限错误类型
+      });
     }
     // 处理400错误 - 可能是因为token问题
     else if (status === 400) {

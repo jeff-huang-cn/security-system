@@ -36,12 +36,12 @@ public class MyBatisOAuth2AuthorizationService implements OAuth2AuthorizationSer
     private final RegisteredClientRepository registeredClientRepository;
     private final ObjectMapper objectMapper;
 
-    public MyBatisOAuth2AuthorizationService(OAuth2AuthorizationMapper authorizationMapper, 
-                                           RegisteredClientRepository registeredClientRepository) {
+    public MyBatisOAuth2AuthorizationService(OAuth2AuthorizationMapper authorizationMapper,
+            RegisteredClientRepository registeredClientRepository) {
         this.authorizationMapper = authorizationMapper;
         this.registeredClientRepository = registeredClientRepository;
         this.objectMapper = new ObjectMapper();
-        
+
         ClassLoader classLoader = MyBatisOAuth2AuthorizationService.class.getClassLoader();
         List<Module> securityModules = SecurityJackson2Modules.getModules(classLoader);
         this.objectMapper.registerModules(securityModules);
@@ -51,9 +51,9 @@ public class MyBatisOAuth2AuthorizationService implements OAuth2AuthorizationSer
     @Override
     public void save(org.springframework.security.oauth2.server.authorization.OAuth2Authorization authorization) {
         Assert.notNull(authorization, "authorization cannot be null");
-        
+
         OAuth2Authorization entity = toEntity(authorization);
-        
+
         // 检查是否已存在
         OAuth2Authorization existing = authorizationMapper.selectById(authorization.getId());
         if (existing != null) {
@@ -77,11 +77,12 @@ public class MyBatisOAuth2AuthorizationService implements OAuth2AuthorizationSer
     }
 
     @Override
-    public org.springframework.security.oauth2.server.authorization.OAuth2Authorization findByToken(String token, OAuth2TokenType tokenType) {
+    public org.springframework.security.oauth2.server.authorization.OAuth2Authorization findByToken(String token,
+            OAuth2TokenType tokenType) {
         Assert.hasText(token, "token cannot be empty");
-        
+
         OAuth2Authorization entity = null;
-        
+
         if (tokenType == null) {
             // 尝试所有令牌类型
             entity = authorizationMapper.findByAccessToken(token);
@@ -98,14 +99,15 @@ public class MyBatisOAuth2AuthorizationService implements OAuth2AuthorizationSer
         } else if (OAuth2ParameterNames.CODE.equals(tokenType.getValue())) {
             entity = authorizationMapper.findByAuthorizationCode(token);
         }
-        
+
         return entity != null ? toObject(entity) : null;
     }
 
     /**
      * 将OAuth2Authorization转换为实体类
      */
-    private OAuth2Authorization toEntity(org.springframework.security.oauth2.server.authorization.OAuth2Authorization authorization) {
+    private OAuth2Authorization toEntity(
+            org.springframework.security.oauth2.server.authorization.OAuth2Authorization authorization) {
         OAuth2Authorization entity = new OAuth2Authorization();
         entity.setId(authorization.getId());
         entity.setRegisteredClientId(authorization.getRegisteredClientId());
@@ -116,17 +118,17 @@ public class MyBatisOAuth2AuthorizationService implements OAuth2AuthorizationSer
         entity.setState(authorization.getAttribute(OAuth2ParameterNames.STATE));
 
         // 授权码
-        org.springframework.security.oauth2.server.authorization.OAuth2Authorization.Token<OAuth2AuthorizationCode> authorizationCode =
-                authorization.getToken(OAuth2AuthorizationCode.class);
-        setTokenValues(entity, authorizationCode, 
+        org.springframework.security.oauth2.server.authorization.OAuth2Authorization.Token<OAuth2AuthorizationCode> authorizationCode = authorization
+                .getToken(OAuth2AuthorizationCode.class);
+        setTokenValues(entity, authorizationCode,
                 entity::setAuthorizationCodeValue,
                 entity::setAuthorizationCodeIssuedAt,
                 entity::setAuthorizationCodeExpiresAt,
                 entity::setAuthorizationCodeMetadata);
 
         // 访问令牌
-        org.springframework.security.oauth2.server.authorization.OAuth2Authorization.Token<OAuth2AccessToken> accessToken =
-                authorization.getToken(OAuth2AccessToken.class);
+        org.springframework.security.oauth2.server.authorization.OAuth2Authorization.Token<OAuth2AccessToken> accessToken = authorization
+                .getToken(OAuth2AccessToken.class);
         setTokenValues(entity, accessToken,
                 entity::setAccessTokenValue,
                 entity::setAccessTokenIssuedAt,
@@ -134,12 +136,13 @@ public class MyBatisOAuth2AuthorizationService implements OAuth2AuthorizationSer
                 entity::setAccessTokenMetadata);
         if (accessToken != null && accessToken.getToken().getTokenType() != null) {
             entity.setAccessTokenType(accessToken.getToken().getTokenType().getValue());
-            entity.setAccessTokenScopes(StringUtils.collectionToCommaDelimitedString(accessToken.getToken().getScopes()));
+            entity.setAccessTokenScopes(
+                    StringUtils.collectionToCommaDelimitedString(accessToken.getToken().getScopes()));
         }
 
         // OIDC ID令牌
-        org.springframework.security.oauth2.server.authorization.OAuth2Authorization.Token<OidcIdToken> oidcIdToken =
-                authorization.getToken(OidcIdToken.class);
+        org.springframework.security.oauth2.server.authorization.OAuth2Authorization.Token<OidcIdToken> oidcIdToken = authorization
+                .getToken(OidcIdToken.class);
         setTokenValues(entity, oidcIdToken,
                 entity::setOidcIdTokenValue,
                 entity::setOidcIdTokenIssuedAt,
@@ -147,8 +150,8 @@ public class MyBatisOAuth2AuthorizationService implements OAuth2AuthorizationSer
                 entity::setOidcIdTokenMetadata);
 
         // 刷新令牌
-        org.springframework.security.oauth2.server.authorization.OAuth2Authorization.Token<OAuth2RefreshToken> refreshToken =
-                authorization.getToken(OAuth2RefreshToken.class);
+        org.springframework.security.oauth2.server.authorization.OAuth2Authorization.Token<OAuth2RefreshToken> refreshToken = authorization
+                .getToken(OAuth2RefreshToken.class);
         setTokenValues(entity, refreshToken,
                 entity::setRefreshTokenValue,
                 entity::setRefreshTokenIssuedAt,
@@ -161,14 +164,17 @@ public class MyBatisOAuth2AuthorizationService implements OAuth2AuthorizationSer
     /**
      * 将实体类转换为OAuth2Authorization
      */
-    private org.springframework.security.oauth2.server.authorization.OAuth2Authorization toObject(OAuth2Authorization entity) {
+    private org.springframework.security.oauth2.server.authorization.OAuth2Authorization toObject(
+            OAuth2Authorization entity) {
         RegisteredClient registeredClient = this.registeredClientRepository.findById(entity.getRegisteredClientId());
         if (registeredClient == null) {
             throw new DataRetrievalFailureException(
-                    "The RegisteredClient with id '" + entity.getRegisteredClientId() + "' was not found in the RegisteredClientRepository.");
+                    "The RegisteredClient with id '" + entity.getRegisteredClientId()
+                            + "' was not found in the RegisteredClientRepository.");
         }
 
-        org.springframework.security.oauth2.server.authorization.OAuth2Authorization.Builder builder = org.springframework.security.oauth2.server.authorization.OAuth2Authorization.withRegisteredClient(registeredClient)
+        org.springframework.security.oauth2.server.authorization.OAuth2Authorization.Builder builder = org.springframework.security.oauth2.server.authorization.OAuth2Authorization
+                .withRegisteredClient(registeredClient)
                 .id(entity.getId())
                 .principalName(entity.getPrincipalName())
                 .authorizationGrantType(resolveAuthorizationGrantType(entity.getAuthorizationGrantType()))
@@ -185,7 +191,8 @@ public class MyBatisOAuth2AuthorizationService implements OAuth2AuthorizationSer
                     entity.getAuthorizationCodeValue(),
                     entity.getAuthorizationCodeIssuedAt(),
                     entity.getAuthorizationCodeExpiresAt());
-            builder.token(authorizationCode, metadata -> metadata.putAll(parseMap(entity.getAuthorizationCodeMetadata())));
+            builder.token(authorizationCode,
+                    metadata -> metadata.putAll(parseMap(entity.getAuthorizationCodeMetadata())));
         }
 
         // 访问令牌
@@ -227,11 +234,11 @@ public class MyBatisOAuth2AuthorizationService implements OAuth2AuthorizationSer
     }
 
     private void setTokenValues(OAuth2Authorization entity,
-                                org.springframework.security.oauth2.server.authorization.OAuth2Authorization.Token<?> token,
-                                Consumer<String> tokenValueConsumer,
-                                Consumer<Instant> issuedAtConsumer,
-                                Consumer<Instant> expiresAtConsumer,
-                                Consumer<String> metadataConsumer) {
+            org.springframework.security.oauth2.server.authorization.OAuth2Authorization.Token<?> token,
+            Consumer<String> tokenValueConsumer,
+            Consumer<Instant> issuedAtConsumer,
+            Consumer<Instant> expiresAtConsumer,
+            Consumer<String> metadataConsumer) {
         if (token != null) {
             OAuth2Token oAuth2Token = token.getToken();
             tokenValueConsumer.accept(oAuth2Token.getTokenValue());
@@ -254,7 +261,8 @@ public class MyBatisOAuth2AuthorizationService implements OAuth2AuthorizationSer
 
     private Map<String, Object> parseMap(String data) {
         try {
-            return this.objectMapper.readValue(data, new TypeReference<Map<String, Object>>() {});
+            return this.objectMapper.readValue(data, new TypeReference<Map<String, Object>>() {
+            });
         } catch (Exception ex) {
             throw new IllegalArgumentException(ex.getMessage(), ex);
         }
@@ -268,4 +276,3 @@ public class MyBatisOAuth2AuthorizationService implements OAuth2AuthorizationSer
         }
     }
 }
-

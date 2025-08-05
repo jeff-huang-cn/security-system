@@ -30,10 +30,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * OAuth2认证控制�?- 使用OAuth2TokenContext方式
@@ -321,9 +318,11 @@ public class OAuth2Controller {
      * 刷新令牌 - 完整实现
      */
     @PostMapping("/refresh")
-    public ResponseEntity<?> refreshToken(@RequestBody RefreshTokenRequest request) {
+    public ResponseEntity<?> refreshToken(
+            @RequestBody RefreshTokenRequest refreshTokenRequest,
+            javax.servlet.http.HttpServletRequest request) {
         try {
-            String refreshTokenValue = request.getRefreshToken();
+            String refreshTokenValue = refreshTokenRequest.getRefreshToken();
             // 从ClientContext获取clientId
             String clientId = ClientContext.getClientId();
 
@@ -377,13 +376,23 @@ public class OAuth2Controller {
             // 5. 获取注册客户端和用户信息
             RegisteredClient registeredClient = getRegisteredClient(clientId);
 
-            // 6. 重新构建认证信息
+            // 6. 重新构建认证信息 - 需要从UserDetailsService重新加载用户权限
+            String username = authorization.getPrincipalName();
+
+            // 从Spring上下文中获取UserDetailsService
+            org.springframework.security.core.userdetails.UserDetailsService userDetailsService = org.springframework.web.context.support.WebApplicationContextUtils
+                    .getRequiredWebApplicationContext(request.getServletContext())
+                    .getBean(org.springframework.security.core.userdetails.UserDetailsService.class);
+
+            // 加载完整的用户详情，包括权限
+            org.springframework.security.core.userdetails.UserDetails userDetails = userDetailsService
+                    .loadUserByUsername(username);
+
+            // 使用完整的用户权限创建新的认证对象
             Authentication authentication = new UsernamePasswordAuthenticationToken(
-                    authorization.getPrincipalName(),
+                    userDetails,
                     null,
-                    authorization.getAttributes().containsKey("authorities")
-                            ? (Collection) authorization.getAttributes().get("authorities")
-                            : Collections.emptySet());
+                    userDetails.getAuthorities());
 
             // 7. 创建新的授权构建器
             OAuth2Authorization.Builder authorizationBuilder = OAuth2Authorization.from(authorization);
@@ -392,18 +401,20 @@ public class OAuth2Controller {
             OAuth2AccessToken newAccessToken = generateAccessToken(authentication, registeredClient,
                     authorizationBuilder);
 
-            // 9. 可选：生成新的刷新令牌（根据配置决定）
-            // 不移除授权，因为我们是提前刷新，旧令牌还未失效可以继续使用，避免请求被401
-            OAuth2RefreshToken newRefreshToken = refreshToken.getToken();
-            //if (registeredClient.getTokenSettings().isReuseRefreshTokens()) {
-            //    // 重用现有刷新令牌
-            //    newRefreshToken = refreshToken.getToken();
-            //} else {
-            //    // 先删除旧的授权记录，再生成新的刷新令牌
-            //    authorizationService.remove(authorization);
-            //    newRefreshToken = generateRefreshToken(authentication, registeredClient, authorizationBuilder);
-            //}
-            
+            // 9. 使用刷新令牌轮换机制
+            // 每次刷新时生成新的refresh_token和新的授权记录
+            log.info("使用token轮换机制，生成新的refresh_token，用户: {}, 客户端: {}",
+                    authorization.getPrincipalName(), clientId);
+
+            // 生成全新的刷新令牌，不再重用旧的
+            OAuth2RefreshToken newRefreshToken = generateRefreshToken(authentication, registeredClient,
+                    authorizationBuilder);
+
+            // 仍然生成新的授权ID，避免覆盖原授权记录
+            // 这样同时存在新旧两个授权记录，旧的会自然过期
+            String newAuthorizationId = "refresh-" + UUID.randomUUID();
+            authorizationBuilder.id(newAuthorizationId);
+
             // 10. 保存授权记录
             OAuth2Authorization newAuthorization = authorizationBuilder.build();
             authorizationService.save(newAuthorization);
@@ -420,10 +431,7 @@ public class OAuth2Controller {
             response.put("token_type", newAccessToken.getTokenType().getValue());
             response.put("expires_in", expiresIn);
             response.put("scope", String.join(" ", newAccessToken.getScopes()));
-
-            if (newRefreshToken != null) {
-                response.put("refresh_token", newRefreshToken.getTokenValue());
-            }
+            response.put("refresh_token", newRefreshToken.getTokenValue());
 
             log.info("OAuth2 Token refreshed for user: {} client: {}",
                     authorization.getPrincipalName(), clientId);
@@ -450,4 +458,3 @@ public class OAuth2Controller {
     }
 
 }
-
