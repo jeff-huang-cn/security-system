@@ -26,6 +26,8 @@ import {
   SettingOutlined
 } from '@ant-design/icons';
 import { roleService, permissionService } from '../services';
+import Permission from './common/Permission';
+import { PermissionUtil } from '../utils/permissionUtil';
 
 const { Option } = Select;
 const { Search } = Input;
@@ -412,44 +414,53 @@ const RoleManagement: React.FC = () => {
       width: 220,
       render: (_: any, record: Role) => (
         <Space size="small">
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          >
-            编辑
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            onClick={() => handleToggleStatus(record.roleId, record.status)}
-          >
-            {record.status === 1 ? '禁用' : '启用'}
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            icon={<SettingOutlined />}
-            onClick={() => handleAssignPermissions(record.roleId)}
-          >
-            分配权限
-          </Button>
-          <Popconfirm
-            title="确定要删除这个角色吗？"
-            onConfirm={() => handleDelete(record.roleId)}
-            okText="确定"
-            cancelText="取消"
-          >
+          <Permission code="ROLE_UPDATE">
             <Button
               type="link"
               size="small"
-              danger
-              icon={<DeleteOutlined />}
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
             >
-              删除
+              编辑
             </Button>
-          </Popconfirm>
+          </Permission>
+          <Permission code="ROLE_UPDATE">
+            <Button
+              type="link"
+              size="small"
+              onClick={() => handleToggleStatus(record.roleId, record.status)}
+            >
+              {record.status === 1 ? '禁用' : '启用'}
+            </Button>
+          </Permission>
+          <Permission code="ROLE_UPDATE">
+            <Button
+              type="link"
+              size="small"
+              icon={<SettingOutlined />}
+              onClick={() => handleAssignPermissions(record.roleId)}
+              disabled={record.status === 0}
+            >
+              分配权限
+            </Button>
+          </Permission>
+          <Permission code="ROLE_DELETE">
+            <Popconfirm
+              title="确定要删除这个角色吗？"
+              onConfirm={() => handleDelete(record.roleId)}
+              okText="确定"
+              cancelText="取消"
+            >
+              <Button
+                type="link"
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+              >
+                删除
+              </Button>
+            </Popconfirm>
+          </Permission>
         </Space>
       ),
     },
@@ -479,13 +490,15 @@ const RoleManagement: React.FC = () => {
               >
                 刷新
               </Button>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={handleCreate}
-              >
-                新增角色
-              </Button>
+              <Permission code="ROLE_CREATE">
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={handleCreate}
+                >
+                  新增角色
+                </Button>
+              </Permission>
             </Space>
           </Col>
         </Row>
@@ -572,7 +585,10 @@ const RoleManagement: React.FC = () => {
         width={800}
         centered
         bodyStyle={{ padding: '10px 24px 12px', maxHeight: '80vh', overflowY: 'auto' }}
-        okButtonProps={{ style: { borderRadius: 4 } }}
+        okButtonProps={{ 
+          style: { borderRadius: 4 },
+          disabled: !PermissionUtil.hasPermission('ROLE_UPDATE')
+        }}
         cancelButtonProps={{ style: { borderRadius: 4 } }}
       >
         <div style={{ marginBottom: 16 }}>

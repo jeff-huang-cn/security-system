@@ -63,4 +63,5 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 .authorities(authorities) // 设置用户权限
                 .build();
     }
+
 }

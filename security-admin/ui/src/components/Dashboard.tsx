@@ -26,6 +26,7 @@ import {
 import UserManagement from './UserManagement';
 import RoleManagement from './RoleManagement';
 import PermissionManagement from './PermissionManagement';
+import ProtectedRoute from './ProtectedRoute';
 import { authService } from '../services/authService';
 
 const { Header, Sider, Content } = Layout;
@@ -121,11 +122,23 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const renderContent = () => {
     switch (selectedKey) {
       case 'users':
-        return <UserManagement />;
+        return (
+          <ProtectedRoute permission="USER_MANAGE">
+            <UserManagement />
+          </ProtectedRoute>
+        );
       case 'roles':
-        return <RoleManagement />;
+        return (
+          <ProtectedRoute permission="ROLE_MANAGE">
+            <RoleManagement />
+          </ProtectedRoute>
+        );
       case 'permissions':
-        return <PermissionManagement />;
+        return (
+          <ProtectedRoute permission="PERMISSION_MANAGE">
+            <PermissionManagement />
+          </ProtectedRoute>
+        );
       default:
         return (
           <div style={{ padding: 24 }}>

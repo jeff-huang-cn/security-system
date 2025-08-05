@@ -1,3 +1,5 @@
+import { PermissionUtil } from '../utils/permissionUtil';
+
 /**
  * Token管理工具类
  * 提供token的存储、获取、清除等功能
@@ -37,6 +39,16 @@ export class TokenManager {
       const defaultExpiry = Date.now() + ((30 * 60 - 100) * 1000); // 30分钟减去100秒缓冲
       localStorage.setItem(this.TOKEN_EXPIRY_KEY, defaultExpiry.toString());
       console.log(`Using default expiry time: ${new Date(defaultExpiry).toLocaleString()} (in 30 minutes with buffer)`);
+    }
+
+    // 重置权限缓存，确保权限信息与最新token同步
+    if (PermissionUtil) {
+      try {
+        PermissionUtil.resetCache();
+        console.log('权限缓存已重置');
+      } catch (error) {
+        console.error('重置权限缓存失败', error);
+      }
     }
   }
 

@@ -26,6 +26,8 @@ import {
   FileOutlined
 } from '@ant-design/icons';
 import { permissionService } from '../services';
+import Permission from './common/Permission';
+import { PermissionUtil } from '../utils/permissionUtil';
 
 const { Option } = Select;
 const { Search } = Input;
@@ -309,36 +311,42 @@ const PermissionManagement: React.FC = () => {
       width: 180,
       render: (_: any, record: Permission) => (
         <Space size="small">
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          >
-            编辑
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            onClick={() => handleToggleStatus(record.permissionId, record.status)}
-          >
-            {record.status === 1 ? '禁用' : '启用'}
-          </Button>
-          <Popconfirm
-            title="确定要删除这个权限吗？"
-            onConfirm={() => handleDelete(record.permissionId)}
-            okText="确定"
-            cancelText="取消"
-          >
+          <Permission code="PERMISSION_UPDATE">
             <Button
               type="link"
               size="small"
-              danger
-              icon={<DeleteOutlined />}
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
             >
-              删除
+              编辑
             </Button>
-          </Popconfirm>
+          </Permission>
+          <Permission code="PERMISSION_UPDATE">
+            <Button
+              type="link"
+              size="small"
+              onClick={() => handleToggleStatus(record.permissionId, record.status)}
+            >
+              {record.status === 1 ? '禁用' : '启用'}
+            </Button>
+          </Permission>
+          <Permission code="PERMISSION_DELETE">
+            <Popconfirm
+              title="确定要删除这个权限吗？"
+              onConfirm={() => handleDelete(record.permissionId)}
+              okText="确定"
+              cancelText="取消"
+            >
+              <Button
+                type="link"
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+              >
+                删除
+              </Button>
+            </Popconfirm>
+          </Permission>
         </Space>
       ),
     },
@@ -368,13 +376,15 @@ const PermissionManagement: React.FC = () => {
               >
                 刷新
               </Button>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={handleCreate}
-              >
-                新增权限
-              </Button>
+              <Permission code="PERMISSION_CREATE">
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={handleCreate}
+                >
+                  新增权限
+                </Button>
+              </Permission>
             </Space>
           </Col>
         </Row>

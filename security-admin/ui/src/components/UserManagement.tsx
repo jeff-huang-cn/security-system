@@ -25,6 +25,8 @@ import {
   ReloadOutlined
 } from '@ant-design/icons';
 import { userService, roleService } from '../services';
+import Permission from './common/Permission';
+import { PermissionUtil } from '../utils/permissionUtil';
 
 const { Option } = Select;
 const { Search } = Input;
@@ -312,44 +314,52 @@ const UserManagement: React.FC = () => {
       width: 200,
       render: (_: any, record: User) => (
         <Space size="small">
-          <Button
-            type="link"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          >
-            编辑
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            onClick={() => handleToggleStatus(record.userId, record.status)}
-          >
-            {record.status === 1 ? '禁用' : '启用'}
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            onClick={() => handleAssignRoles(record.userId)}
-            disabled={record.status === 0}
-          >
-            分配角色
-          </Button>
-          <Popconfirm
-            title="确定要删除这个用户吗？"
-            onConfirm={() => handleDelete(record.userId)}
-            okText="确定"
-            cancelText="取消"
-          >
+          <Permission code="USER_UPDATE">
             <Button
               type="link"
               size="small"
-              danger
-              icon={<DeleteOutlined />}
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
             >
-              删除
+              编辑
             </Button>
-          </Popconfirm>
+          </Permission>
+          <Permission code="USER_UPDATE">
+            <Button
+              type="link"
+              size="small"
+              onClick={() => handleToggleStatus(record.userId, record.status)}
+            >
+              {record.status === 1 ? '禁用' : '启用'}
+            </Button>
+          </Permission>
+          <Permission code="USER_UPDATE">
+            <Button
+              type="link"
+              size="small"
+              onClick={() => handleAssignRoles(record.userId)}
+              disabled={record.status === 0}
+            >
+              分配角色
+            </Button>
+          </Permission>
+          <Permission code="USER_DELETE">
+            <Popconfirm
+              title="确定要删除这个用户吗？"
+              onConfirm={() => handleDelete(record.userId)}
+              okText="确定"
+              cancelText="取消"
+            >
+              <Button
+                type="link"
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+              >
+                删除
+              </Button>
+            </Popconfirm>
+          </Permission>
         </Space>
       ),
     },
@@ -379,13 +389,15 @@ const UserManagement: React.FC = () => {
               >
                 刷新
               </Button>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={handleCreate}
-              >
-                新增用户
-              </Button>
+              <Permission code="USER_CREATE">
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={handleCreate}
+                >
+                  新增用户
+                </Button>
+              </Permission>
             </Space>
           </Col>
         </Row>
@@ -489,7 +501,10 @@ const UserManagement: React.FC = () => {
         width={700}
         centered
         bodyStyle={{ padding: '10px 24px 12px' }}
-        okButtonProps={{ style: { borderRadius: 4 } }}
+        okButtonProps={{ 
+          style: { borderRadius: 4 },
+          disabled: !PermissionUtil.hasPermission('USER_UPDATE') 
+        }}
         cancelButtonProps={{ style: { borderRadius: 4 } }}
       >
         <div 
