@@ -1,5 +1,5 @@
 import React from 'react';
-import { TokenManager } from '../services/tokenManager';
+import { TokenManager } from '../../services/tokenManager';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -21,7 +21,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, permission })
   // 如果指定了权限要求，需要进一步检查
   if (permission) {
     // 导入PermissionUtil
-    const { PermissionUtil } = require('../utils/permissionUtil');
+    const { PermissionUtil } = require('../../utils/permissionUtil');
     
     // 检查是否有所需权限
     const hasPermission = Array.isArray(permission)

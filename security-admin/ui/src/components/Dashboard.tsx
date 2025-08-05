@@ -26,7 +26,7 @@ import {
 import UserManagement from './UserManagement';
 import RoleManagement from './RoleManagement';
 import PermissionManagement from './PermissionManagement';
-import ProtectedRoute from './ProtectedRoute';
+import ProtectedRoute from './common/ProtectedRoute';
 import { authService } from '../services/authService';
 
 const { Header, Sider, Content } = Layout;
