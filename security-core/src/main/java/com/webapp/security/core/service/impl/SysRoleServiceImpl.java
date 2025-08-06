@@ -101,10 +101,8 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
         // 删除用户角色关联
         userRoleMapper.deleteByRoleId(roleId);
 
-        // 逻辑删除角色
-        role.setDeleted(1);
-        role.setUpdateTime(LocalDateTime.now());
-        return updateById(role);
+        // 使用MyBatis-Plus的逻辑删除方法
+        return removeById(roleId);
     }
 
     @Override
@@ -148,7 +146,8 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
                         .collect(Collectors.toList());
                 int insertCount = rolePermissionMapper.batchInsert(rolePermissions);
                 if (insertCount != partitionedPermissionId.size()) {
-                    log.error("批量插入角色权限关联失败, 角色ID: {}, 批次: {}/{}, 插入条数: {}", roleId, (partitionedPermissionIds.indexOf(partitionedPermissionId) + 1),
+                    log.error("批量插入角色权限关联失败, 角色ID: {}, 批次: {}/{}, 插入条数: {}", roleId,
+                            (partitionedPermissionIds.indexOf(partitionedPermissionId) + 1),
                             partitionedPermissionIds.size(), insertCount);
                 }
             }

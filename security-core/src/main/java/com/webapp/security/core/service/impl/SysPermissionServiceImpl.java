@@ -101,10 +101,8 @@ public class SysPermissionServiceImpl extends ServiceImpl<SysPermissionMapper, S
         // 删除角色权限关联
         rolePermissionMapper.deleteByPermissionId(permissionId);
 
-        // 逻辑删除权限
-        permission.setDeleted(1);
-        permission.setUpdateTime(LocalDateTime.now());
-        return updateById(permission);
+        // 使用MyBatis-Plus的逻辑删除方法
+        return removeById(permissionId);
     }
 
     @Override

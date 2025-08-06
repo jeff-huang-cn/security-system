@@ -142,10 +142,8 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         // 删除用户角色关联
         userRoleMapper.deleteByUserId(userId);
 
-        // 逻辑删除用户
-        user.setDeleted(1);
-        user.setUpdateTime(LocalDateTime.now());
-        return updateById(user);
+        // 使用MyBatis-Plus的逻辑删除方法
+        return removeById(userId);
     }
 
     @Override
@@ -206,7 +204,8 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
                         .collect(Collectors.toList());
                 int insertCount = userRoleMapper.batchInsert(userRoles);
                 if (insertCount != partitionedRoleId.size()) {
-                    log.error("批量插入用户角色失败, 用户ID: {}, 批次: {}/{}, 插入条数: {}", userId, (partitionedRoleIds.indexOf(partitionedRoleId) + 1),
+                    log.error("批量插入用户角色失败, 用户ID: {}, 批次: {}/{}, 插入条数: {}", userId,
+                            (partitionedRoleIds.indexOf(partitionedRoleId) + 1),
                             partitionedRoleIds.size(), insertCount);
                 }
             }
