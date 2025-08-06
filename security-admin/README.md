@@ -1143,7 +1143,7 @@ WHERE u.username = 'admin' AND p.status = 1;
 - MapStruct
 - Lombok
 - MySQL
-- Flyway
+- Flyway 
 - JWT
 - Redis (可选，用于权限缓存)
 

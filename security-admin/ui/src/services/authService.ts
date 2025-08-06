@@ -99,7 +99,7 @@ export const authService = {
       
       // 使用TokenManager保存token信息
       TokenManager.saveTokens(access_token, newRefreshToken, expires_in);
-      console.error('Token refresh success:');
+      console.info('Token refresh success, new access token saved');
     } catch (error) {
       console.error('Token refresh failed:', error);
       // 刷新失败，清除token避免继续使用无效token

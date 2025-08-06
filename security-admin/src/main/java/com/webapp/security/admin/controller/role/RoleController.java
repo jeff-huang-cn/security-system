@@ -1,20 +1,19 @@
 package com.webapp.security.admin.controller.role;
 
+
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.webapp.security.admin.controller.permission.vo.PermissionVO;
 import com.webapp.security.admin.controller.role.dto.PermissionIdsDTO;
 import com.webapp.security.admin.controller.role.dto.RoleCreateDTO;
 import com.webapp.security.admin.controller.role.dto.RoleUpdateDTO;
-import com.webapp.security.admin.controller.user.dto.StatusDTO;
 import com.webapp.security.admin.controller.role.vo.RoleVO;
-import com.webapp.security.admin.controller.user.vo.UserVO;
-import com.webapp.security.admin.controller.permission.vo.PermissionVO;
-import com.webapp.security.admin.converter.RoleConverter;
+import com.webapp.security.admin.controller.user.dto.StatusDTO;
 import com.webapp.security.admin.converter.PermissionConverter;
-import com.webapp.security.core.entity.SysRole;
-import com.webapp.security.core.entity.SysUser;
+import com.webapp.security.admin.converter.RoleConverter;
 import com.webapp.security.core.entity.SysPermission;
+import com.webapp.security.core.entity.SysRole;
 import com.webapp.security.core.model.PagedDTO;
 import com.webapp.security.core.model.PagedResult;
 import com.webapp.security.core.model.ResponseResult;

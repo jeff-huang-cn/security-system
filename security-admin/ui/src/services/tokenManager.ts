@@ -81,7 +81,7 @@ export class TokenManager {
     }
     
     const now = Date.now();
-    const fiveMinutes = 5 * 60 * 1000; // 5分钟
+    const fiveMinutes = 2 * 60 * 1000; // 5分钟
     const timeRemaining = expiry - now;
     
     // 只有当剩余时间小于5分钟且大于0时才需要刷新

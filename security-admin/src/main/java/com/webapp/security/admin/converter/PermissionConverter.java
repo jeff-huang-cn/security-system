@@ -70,11 +70,11 @@ public interface PermissionConverter {
         if (permType == null)
             return "未知";
         switch (permType) {
-            case 0:
-                return "菜单";
             case 1:
-                return "按钮";
+                return "菜单";
             case 2:
+                return "按钮";
+            case 3:
                 return "接口";
             default:
                 return "未知";

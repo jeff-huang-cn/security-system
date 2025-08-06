@@ -8,6 +8,7 @@ import javax.validation.constraints.Size;
  * 权限更新请求DTO
  */
 @Data
+@MenuPathRequired
 public class PermissionUpdateDTO {
     /**
      * 权限编码
@@ -27,7 +28,7 @@ public class PermissionUpdateDTO {
     private String description;
 
     /**
-     * 权限类型：0-菜单，1-按钮，2-接口
+     * 权限类型：1-菜单，2-按钮，3-接口
      */
     private Integer permType;
 
@@ -39,6 +40,7 @@ public class PermissionUpdateDTO {
     /**
      * 权限路径
      */
+    @Size(max = 2000, message = "权限路径长度不能超过2000个字符")
     private String permPath;
 
     /**

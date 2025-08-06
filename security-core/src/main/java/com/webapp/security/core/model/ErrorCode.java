@@ -1,7 +1,5 @@
 package com.webapp.security.core.model;
 
-import org.omg.CORBA.UNKNOWN;
-
 /**
  * 基础错误码枚举
  * 

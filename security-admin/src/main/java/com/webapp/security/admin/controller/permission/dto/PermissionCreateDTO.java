@@ -10,6 +10,7 @@ import javax.validation.constraints.Size;
  * 权限创建请求DTO
  */
 @Data
+@MenuPathRequired
 public class PermissionCreateDTO {
     /**
      * 权限编码
@@ -31,7 +32,7 @@ public class PermissionCreateDTO {
     private String description;
 
     /**
-     * 权限类型：0-菜单，1-按钮，2-接口
+     * 权限类型：1-菜单，2-按钮，3-接口
      */
     @NotNull(message = "权限类型不能为空")
     private Integer permType;
@@ -44,12 +45,13 @@ public class PermissionCreateDTO {
     /**
      * 权限路径
      */
+    @Size(max = 2000, message = "权限路径长度不能超过2000个字符")
     private String permPath;
 
     /**
      * 排序
      */
-    private Integer sortOrder = 0;
+    private Integer sortOrder = 1;
 
     /**
      * 状态：0-禁用，1-启用

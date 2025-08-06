@@ -35,15 +35,16 @@ const { TextArea } = Input;
 
 interface Permission {
   permissionId: number;
-  permName: string;  // 注意：后端可能使用permName而不是permissionName
-  permCode: string;  // 注意：后端可能使用permCode而不是permissionCode
-  permType: string;  // 注意：后端可能使用permType而不是permissionType
+  permName: string;
+  permCode: string;
+  permType: number;  // 修正：后端返回的是number类型
   parentId: number;
-  permPath: string;  // 注意：后端可能使用permPath而不是path
-  icon: string;
-  sortOrder: number;
+  permPath: string;
+  description?: string;  // 添加描述字段
   status: number;
+  sortOrder: number;
   createTime: string;
+  updateTime?: string;
   children?: Permission[];
 }
 
@@ -68,14 +69,17 @@ const PermissionManagement: React.FC = () => {
       // 使用新的 getAllPermissions 方法获取所有权限
       const result = await permissionService.getAllPermissions();
       
-      debugger
+      console.log('API返回的原始数据:', result);
+      
       // 确保结果是数组
       const permissionList: Permission[] = Array.isArray(result) ? result : [];
       
-      // console.log('获取到的权限列表:', permissionList);
+      console.log('处理后的权限列表:', permissionList);
       
       // 构建树形结构
       const tree = buildPermissionTree(permissionList);
+      
+      console.log('构建的树形结构:', tree);
 
       setPermissions(tree);
       
@@ -86,9 +90,15 @@ const PermissionManagement: React.FC = () => {
       // 默认展开所有节点
       const allKeys = permissionList.map((p: Permission) => p.permissionId);
       setExpandedRowKeys(allKeys);
-    } catch (error) {
-      message.error('加载权限列表失败');
+    } catch (error: any) {
       console.error('加载权限列表失败:', error);
+      if (error.response?.status === 403) {
+        message.error('权限不足，无法查看权限列表');
+      } else if (error.response?.status === 401) {
+        message.error('未授权，请重新登录');
+      } else {
+        message.error('加载权限列表失败: ' + (error.message || '未知错误'));
+      }
     } finally {
       setLoading(false);
     }
@@ -98,6 +108,8 @@ const PermissionManagement: React.FC = () => {
     const map: { [key: number]: Permission } = {};
     const tree: Permission[] = [];
 
+    console.log('构建树形结构，原始数据:', permissions);
+
     // 创建映射
     permissions.forEach(permission => {
       map[permission.permissionId] = { ...permission, children: [] };
@@ -105,13 +117,24 @@ const PermissionManagement: React.FC = () => {
 
     // 构建树结构
     permissions.forEach(permission => {
-      if (permission.parentId === 0) {
+      console.log(`处理权限 ${permission.permName}, parentId: ${permission.parentId}`);
+      
+      if (permission.parentId === 0 || permission.parentId === null || permission.parentId === undefined) {
+        // 根节点
+        console.log(`添加根节点: ${permission.permName}`);
         tree.push(map[permission.permissionId]);
       } else if (map[permission.parentId]) {
+        // 子节点
+        console.log(`添加子节点 ${permission.permName} 到父节点 ${map[permission.parentId].permName}`);
         map[permission.parentId].children!.push(map[permission.permissionId]);
+      } else {
+        // 如果找不到父节点，作为根节点处理
+        console.log(`找不到父节点，将 ${permission.permName} 作为根节点`);
+        tree.push(map[permission.permissionId]);
       }
     });
 
+    console.log('构建完成的树形结构:', tree);
     return tree;
   };
 
@@ -127,7 +150,7 @@ const PermissionManagement: React.FC = () => {
       children: []
     });
 
-          // 创建节点映射
+    // 创建节点映射
     permissions.forEach(permission => {
       map[permission.permissionId] = {
         title: permission.permName,
@@ -139,10 +162,13 @@ const PermissionManagement: React.FC = () => {
 
     // 构建树结构
     permissions.forEach(permission => {
-      if (permission.parentId === 0) {
+      if (permission.parentId === 0 || permission.parentId === null) {
         tree[0].children.push(map[permission.permissionId]);
       } else if (map[permission.parentId]) {
         map[permission.parentId].children.push(map[permission.permissionId]);
+      } else {
+        // 如果找不到父节点，作为根节点的子节点
+        tree[0].children.push(map[permission.permissionId]);
       }
     });
 
@@ -158,12 +184,11 @@ const PermissionManagement: React.FC = () => {
   const handleEdit = (permission: Permission) => {
     setEditingPermission(permission);
     form.setFieldsValue({
-      permissionName: permission.permName,
-      permissionCode: permission.permCode,
-      permissionType: permission.permType,
+      permName: permission.permName,
+      permCode: permission.permCode,
+      permType: permission.permType,
       parentId: permission.parentId,
-      path: permission.permPath,
-      icon: permission.icon,
+      permPath: permission.permPath,
       sortOrder: permission.sortOrder,
       status: permission.status
     });
@@ -216,23 +241,23 @@ const PermissionManagement: React.FC = () => {
     setSearchKeyword(value);
   };
 
-  const getPermissionTypeTag = (type: string) => {
-    const typeMap: { [key: string]: { color: string; text: string } } = {
-      'menu': { color: 'blue', text: '菜单' },
-      'button': { color: 'green', text: '按钮' },
-      'api': { color: 'orange', text: 'API' }
+  const getPermissionTypeTag = (type: number) => {
+    const typeMap: { [key: number]: { color: string; text: string } } = {
+      1: { color: 'blue', text: '菜单' },
+      2: { color: 'green', text: '按钮' },
+      3: { color: 'orange', text: 'API' }
     };
-    const config = typeMap[type] || { color: 'default', text: type };
+    const config = typeMap[type] || { color: 'default', text: `类型${type}` };
     return <Tag color={config.color}>{config.text}</Tag>;
   };
 
-  const getPermissionIcon = (type: string) => {
+  const getPermissionIcon = (type: number) => {
     switch (type) {
-      case 'menu':
+      case 1:
         return <FolderOutlined style={{ color: '#1890ff' }} />;
-      case 'button':
+      case 2:
         return <SafetyOutlined style={{ color: '#52c41a' }} />;
-      case 'api':
+      case 3:
         return <FileOutlined style={{ color: '#fa8c16' }} />;
       default:
         return <SafetyOutlined />;
@@ -264,7 +289,7 @@ const PermissionManagement: React.FC = () => {
       dataIndex: 'permType',
       key: 'permType',
       width: 100,
-      render: (type: string) => getPermissionTypeTag(type),
+      render: (type: number) => getPermissionTypeTag(type),
     },
     {
       title: '路径',
@@ -273,13 +298,7 @@ const PermissionManagement: React.FC = () => {
       width: 150,
       ellipsis: true,
     },
-    {
-      title: '图标',
-      dataIndex: 'icon',
-      key: 'icon',
-      width: 80,
-      render: (icon: string) => icon ? <span>{icon}</span> : '-',
-    },
+
     {
       title: '排序',
       dataIndex: 'sortOrder',
@@ -311,42 +330,36 @@ const PermissionManagement: React.FC = () => {
       width: 180,
       render: (_: any, record: Permission) => (
         <Space size="small">
-          <Permission code="PERMISSION_UPDATE">
+          <Button
+            type="link"
+            size="small"
+            icon={<EditOutlined />}
+            onClick={() => handleEdit(record)}
+          >
+            编辑
+          </Button>
+          <Button
+            type="link"
+            size="small"
+            onClick={() => handleToggleStatus(record.permissionId, record.status)}
+          >
+            {record.status === 1 ? '禁用' : '启用'}
+          </Button>
+          <Popconfirm
+            title="确定要删除这个权限吗？"
+            onConfirm={() => handleDelete(record.permissionId)}
+            okText="确定"
+            cancelText="取消"
+          >
             <Button
               type="link"
               size="small"
-              icon={<EditOutlined />}
-              onClick={() => handleEdit(record)}
+              danger
+              icon={<DeleteOutlined />}
             >
-              编辑
+              删除
             </Button>
-          </Permission>
-          <Permission code="PERMISSION_UPDATE">
-            <Button
-              type="link"
-              size="small"
-              onClick={() => handleToggleStatus(record.permissionId, record.status)}
-            >
-              {record.status === 1 ? '禁用' : '启用'}
-            </Button>
-          </Permission>
-          <Permission code="PERMISSION_DELETE">
-            <Popconfirm
-              title="确定要删除这个权限吗？"
-              onConfirm={() => handleDelete(record.permissionId)}
-              okText="确定"
-              cancelText="取消"
-            >
-              <Button
-                type="link"
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-              >
-                删除
-              </Button>
-            </Popconfirm>
-          </Permission>
+          </Popconfirm>
         </Space>
       ),
     },
@@ -357,7 +370,7 @@ const PermissionManagement: React.FC = () => {
       <Card>
         <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
           <Col>
-            <h2 style={{ margin: 0 }}>权限管理</h2>
+            <h2 style={{ margin: 0 }}>权限管理 (共{permissions.length}条)</h2>
           </Col>
           <Col>
             <Space>
@@ -376,15 +389,13 @@ const PermissionManagement: React.FC = () => {
               >
                 刷新
               </Button>
-              <Permission code="PERMISSION_CREATE">
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={handleCreate}
-                >
-                  新增权限
-                </Button>
-              </Permission>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={handleCreate}
+              >
+                新增权限
+              </Button>
             </Space>
           </Col>
         </Row>
@@ -399,8 +410,12 @@ const PermissionManagement: React.FC = () => {
             expandedRowKeys,
             onExpandedRowsChange: (keys) => setExpandedRowKeys([...keys]),
             childrenColumnName: 'children',
+            defaultExpandAllRows: true, // 默认展开所有节点
           }}
           scroll={{ x: 1200 }}
+          onRow={(record) => ({
+            onClick: () => console.log('点击行:', record)
+          })}
         />
       </Card>
 
@@ -416,13 +431,13 @@ const PermissionManagement: React.FC = () => {
           form={form}
           layout="vertical"
           onFinish={handleSubmit}
-          initialValues={{ status: 1, sortOrder: 0, parentId: 0 }}
+          initialValues={{ status: 1, sortOrder: 1, parentId: 0 }}
         >
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
                 label="权限名称"
-                name="permissionName"
+                name="permName"
                 rules={[{ required: true, message: '请输入权限名称' }]}
               >
                 <Input placeholder="请输入权限名称" />
@@ -431,7 +446,7 @@ const PermissionManagement: React.FC = () => {
             <Col span={12}>
               <Form.Item
                 label="权限编码"
-                name="permissionCode"
+                name="permCode"
                 rules={[{ required: true, message: '请输入权限编码' }]}
               >
                 <Input placeholder="请输入权限编码" />
@@ -443,13 +458,13 @@ const PermissionManagement: React.FC = () => {
             <Col span={12}>
               <Form.Item
                 label="权限类型"
-                name="permissionType"
+                name="permType"
                 rules={[{ required: true, message: '请选择权限类型' }]}
               >
                 <Select placeholder="请选择权限类型">
-                  <Option value="menu">菜单</Option>
-                  <Option value="button">按钮</Option>
-                  <Option value="api">API</Option>
+                  <Option value={1}>菜单</Option>
+                  <Option value={2}>按钮</Option>
+                  <Option value={3}>API</Option>
                 </Select>
               </Form.Item>
             </Col>
@@ -469,30 +484,32 @@ const PermissionManagement: React.FC = () => {
           </Row>
 
           <Form.Item
-            label="路径"
-            name="path"
+            noStyle
+            shouldUpdate={(prevValues, currentValues) => prevValues.permType !== currentValues.permType}
           >
-            <Input placeholder="请输入路径" />
+            {({ getFieldValue }) => {
+              const permType = getFieldValue('permType');
+              return permType === 1 ? (
+                <Form.Item
+                  label="路径"
+                  name="permPath"
+                  rules={[
+                    { required: true, message: '菜单类型必须填写路径' },
+                    { pattern: /^\/.+/, message: '路径必须以/开头' }
+                  ]}
+                >
+                  <Input placeholder="请输入路径，如：/users" />
+                </Form.Item>
+              ) : null;
+            }}
           </Form.Item>
 
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                label="图标"
-                name="icon"
-              >
-                <Input placeholder="请输入图标" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                label="排序"
-                name="sortOrder"
-              >
-                <Input type="number" placeholder="请输入排序号" />
-              </Form.Item>
-            </Col>
-          </Row>
+          <Form.Item
+            label="排序"
+            name="sortOrder"
+          >
+            <Input type="number" placeholder="请输入排序号" />
+          </Form.Item>
 
           <Form.Item
             label="状态"
