@@ -69,7 +69,7 @@ const requestInterceptor = async (config: any) => {
   const latestToken = TokenManager.getAccessToken();
   if (latestToken) {
     config.headers.Authorization = `Bearer ${latestToken}`;
-    console.log(`【请求】使用token: ${latestToken}`);
+    
   }
   // 检查是否需要刷新token（标志位优先判断，提高执行效率）
   if (!tokenRefreshTriggered && TokenManager.isAuthenticated() && TokenManager.isTokenExpiringSoon()) {
@@ -87,12 +87,12 @@ const requestInterceptor = async (config: any) => {
       tokenRefreshDebounceTimer = null;
     }, 5000);
     
-    console.log('Token is expiring soon, triggering background refresh');
+    
     
     // 在后台刷新token，不阻塞当前请求
     authService.refreshToken()
       .then(response => {
-        console.log('Token refreshed successfully in background');
+
         
         // 强制重置防抖标志，表明刷新已完成，其他请求可以使用新token
         tokenRefreshTriggered = false;
@@ -199,12 +199,12 @@ const responseErrorInterceptor = async (error: any) => {
           
           // 设置新的认证头
           originalRequest.headers.Authorization = `Bearer ${newToken}`;
-          console.log(`【重试】使用新token: ${newToken}`);
+  
           
           // 确保其他可能的配置都是最新的
           
           // 重新发送原始请求
-          console.log('Token refreshed, retrying original request');
+  
           return axios(originalRequest);
         } catch (refreshError) {
           console.error('Token refresh failed during 401 handling:', refreshError);
@@ -284,7 +284,7 @@ const responseErrorInterceptor = async (error: any) => {
         
         try {
           // 尝试刷新token
-          console.log('尝试刷新token后重新发送请求');
+  
           const refreshResponse = await authService.refreshToken();
           
           // 使用新token重试

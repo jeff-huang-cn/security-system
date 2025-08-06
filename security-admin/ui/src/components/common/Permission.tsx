@@ -41,7 +41,7 @@ const Permission: React.FC<React.PropsWithChildren<PermissionProps>> = ({
   
   try {
     hasPermission = permissions.some(p => PermissionUtil.hasPermission(p));
-    console.log(`权限检查[${permissions.join(',')}]: ${hasPermission ? '通过✅' : '未通过❌'}`);
+    // console.log(`权限检查[${permissions.join(',')}]: ${hasPermission ? '通过✅' : '未通过❌'}`);
     
     // 添加所有权限的调试信息
     if (!hasPermission) {

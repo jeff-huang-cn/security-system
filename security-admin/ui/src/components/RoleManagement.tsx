@@ -101,10 +101,10 @@ const RoleManagement: React.FC = () => {
     try {
       const rolePermissions = await roleService.getRolePermissions(roleId);
       const permissionsList: Permission[] = Array.isArray(rolePermissions) ? rolePermissions : [];
-      console.log('刷新获取到的角色权限:', permissionsList);
+      // console.log('刷新获取到的角色权限:', permissionsList);
       
       const selectedIds = permissionsList.map(permission => permission.permissionId);
-      console.log('刷新选中的权限ID:', selectedIds);
+      // console.log('刷新选中的权限ID:', selectedIds);
       setSelectedPermissions(selectedIds);
     } catch (error) {
       console.error('刷新角色权限失败:', error);
@@ -160,12 +160,12 @@ const RoleManagement: React.FC = () => {
       const permissionList = await permissionService.getAllPermissions();
       // 确保结果是数组
       const permissions: Permission[] = Array.isArray(permissionList) ? permissionList : [];
-      console.log('角色管理-获取到的权限列表:', permissions);
+      // console.log('角色管理-获取到的权限列表:', permissions);
       setPermissions(permissions);
       
       // 构建权限树
       const tree = buildPermissionTree(permissions);
-      console.log('角色管理-构建的权限树:', tree);
+
       setPermissionTree(tree);
       return permissions; // 返回权限列表，方便外部使用
     } catch (error) {
@@ -202,7 +202,7 @@ const RoleManagement: React.FC = () => {
         map[permission.parentId].children.push(map[permission.permissionId]);
       } else {
         // 如果找不到父节点，将其作为顶级节点
-        console.warn(`找不到权限 ${permission.permissionId}(${permission.permName}) 的父节点 ${permission.parentId}，作为顶级节点处理`);
+        // console.warn(`找不到权限 ${permission.permissionId}(${permission.permName}) 的父节点 ${permission.parentId}，作为顶级节点处理`);
         tree.push(map[permission.permissionId]);
       }
     });
@@ -224,7 +224,7 @@ const RoleManagement: React.FC = () => {
     };
     
     const cleanedTree = cleanupEmptyChildren(tree);
-    console.log('清理后的权限树:', cleanedTree);
+    // console.log('清理后的权限树:', cleanedTree);
     return cleanedTree;
   };
 
@@ -299,17 +299,17 @@ const RoleManagement: React.FC = () => {
     try {
       // 先加载所有权限数据
       const allPermissions = await loadPermissions();
-      console.log('所有权限数据:', allPermissions);
+      // console.log('所有权限数据:', allPermissions);
       
       // 再获取角色已分配的权限
       const rolePermissions = await roleService.getRolePermissions(roleId);
       // 确保返回的是数组
       const permissionsList: Permission[] = Array.isArray(rolePermissions) ? rolePermissions : [];
-      console.log('获取到的角色权限:', permissionsList);
+      // console.log('获取到的角色权限:', permissionsList);
       
       // 设置已选中权限ID列表
       const selectedIds = permissionsList.map(permission => permission.permissionId);
-      console.log('选中的权限ID:', selectedIds);
+      // console.log('选中的权限ID:', selectedIds);
       setSelectedPermissions(selectedIds);
       
       // 显示模态框
@@ -584,7 +584,7 @@ const RoleManagement: React.FC = () => {
         cancelText="取消"
         width={800}
         centered
-        bodyStyle={{ padding: '10px 24px 12px', maxHeight: '80vh', overflowY: 'auto' }}
+        styles={{ body: { padding: '10px 24px 12px', maxHeight: '80vh', overflowY: 'auto' } }}
         okButtonProps={{ 
           style: { borderRadius: 4 },
           disabled: !PermissionUtil.hasPermission('ROLE_UPDATE')

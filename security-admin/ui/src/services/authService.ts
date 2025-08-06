@@ -42,7 +42,7 @@ export const authService = {
       expires_in = parseInt(expires_in, 10);
     }
     
-    console.log('Token expires in:', expires_in, 'seconds');
+
     
     // 使用TokenManager保存token信息
     if (access_token) {
@@ -75,12 +75,12 @@ export const authService = {
         throw new Error('No refresh token available');
       }
 
-      console.log('Attempting to refresh token with refresh_token');
+
       const response = await authApi.post('/oauth2/refresh', {
         refreshToken: token
       });
 
-      console.log('Refresh response:', response.data);
+
 
       // 更新本地存储的token
       const { access_token, refresh_token: newRefreshToken } = response.data;
@@ -95,7 +95,7 @@ export const authService = {
         expires_in = parseInt(expires_in, 10);
       }
       
-      console.log('New token expires in:', expires_in, 'seconds');
+
       
       // 使用TokenManager保存token信息
       TokenManager.saveTokens(access_token, newRefreshToken, expires_in);

@@ -51,7 +51,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
           borderRadius: 8
         }}
-        bodyStyle={{ padding: '40px' }}
+        styles={{ body: { padding: '40px' } }}
       >
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{

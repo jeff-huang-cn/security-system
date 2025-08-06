@@ -500,7 +500,7 @@ const UserManagement: React.FC = () => {
         cancelText="取消"
         width={700}
         centered
-        bodyStyle={{ padding: '10px 24px 12px' }}
+        styles={{ body: { padding: '10px 24px 12px' } }}
         okButtonProps={{ 
           style: { borderRadius: 4 },
           disabled: !PermissionUtil.hasPermission('USER_UPDATE') 

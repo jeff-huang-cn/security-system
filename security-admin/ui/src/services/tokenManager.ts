@@ -33,7 +33,7 @@ export class TokenManager {
       const expiryTime = Date.now() + (adjustedExpiresIn * 1000);
       localStorage.setItem(this.TOKEN_EXPIRY_KEY, expiryTime.toString());
       
-      console.log(`Token will expire at: ${new Date(expiryTime).toLocaleString()} (in ${adjustedExpiresIn} seconds, with ${bufferTime}s buffer)`);
+
     } else {
       // 如果没有提供有效的过期时间，使用默认值（30分钟 - 缓冲时间）
       const defaultExpiry = Date.now() + ((30 * 60 - 100) * 1000); // 30分钟减去100秒缓冲
@@ -45,7 +45,7 @@ export class TokenManager {
     if (PermissionUtil) {
       try {
         PermissionUtil.resetCache();
-        console.log('权限缓存已重置');
+  
       } catch (error) {
         console.error('重置权限缓存失败', error);
       }
@@ -88,7 +88,7 @@ export class TokenManager {
     // 避免刚登录就触发刷新
     const isExpiring = timeRemaining <= fiveMinutes && timeRemaining > 0;
     if (isExpiring) {
-      console.log(`Token is expiring soon. Expires at: ${new Date(expiry).toLocaleString()}, now: ${new Date(now).toLocaleString()}, remaining: ${Math.round(timeRemaining/1000)}s`);
+
     }
     return isExpiring;
   }
@@ -111,7 +111,7 @@ export class TokenManager {
     const isExpired = now >= expiry;
     
     if (isExpired) {
-      console.log(`Token has expired. Expired at: ${new Date(expiry).toLocaleString()}, now: ${new Date(now).toLocaleString()}`);
+
     }
     
     return isExpired;
@@ -138,7 +138,7 @@ export class TokenManager {
     localStorage.removeItem(this.ACCESS_TOKEN_KEY);
     localStorage.removeItem(this.REFRESH_TOKEN_KEY);
     localStorage.removeItem(this.TOKEN_EXPIRY_KEY);
-    console.log('All tokens cleared from localStorage');
+
   }
 
   /**
@@ -147,20 +147,20 @@ export class TokenManager {
   static getTokenRemainingTime(): number {
     const expiryTime = localStorage.getItem(this.TOKEN_EXPIRY_KEY);
     if (!expiryTime) {
-      console.log('No token expiry time found');
+
       return 0;
     }
     
     const expiry = parseInt(expiryTime, 10);
     if (isNaN(expiry)) {
-      console.log('Invalid token expiry time');
+
       return 0;
     }
     
     const now = Date.now();
     const remainingTime = Math.max(0, expiry - now);
     
-    console.log(`Token remaining time: ${Math.round(remainingTime / 1000)} seconds (expires at ${new Date(expiry).toLocaleString()})`);
+    
     return remainingTime;
   }
 }

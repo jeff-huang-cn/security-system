@@ -22,7 +22,7 @@ export class PermissionUtil {
     this.permissionCache.clear();
     this.permissionsArray = null;
     this.lastTokenUsed = null;
-    console.log('权限缓存已重置');
+
   }
 
   /**
@@ -40,7 +40,7 @@ export class PermissionUtil {
       // 获取当前token
       const token = TokenManager.getAccessToken();
       if (!token) {
-        console.log('权限检查: 无token');
+
         return [];
       }
 
@@ -55,7 +55,7 @@ export class PermissionUtil {
       try {
         // @ts-ignore
         decodedToken = jwtDecode(token);
-        console.log('JWT解析结果:', decodedToken);
+  
       } catch (e) {
         console.error('JWT解析失败:', e);
         return [];
@@ -72,7 +72,7 @@ export class PermissionUtil {
         ? decodedToken.authorities 
         : [];
       
-      console.log('JWT中的权限列表:', authorities);
+
       
       // 保存到缓存
       this.permissionsArray = authorities;
@@ -101,7 +101,7 @@ export class PermissionUtil {
     
     // 直接匹配
     const result = authorities.includes(permissionCode);
-    console.log(`检查权限: ${permissionCode}, 结果: ${result ? '通过' : '未通过'}`);
+
     
     // 缓存结果
     this.permissionCache.set(permissionCode, result);

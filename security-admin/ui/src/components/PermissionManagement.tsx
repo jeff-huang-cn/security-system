@@ -76,7 +76,7 @@ const PermissionManagement: React.FC = () => {
       
       // 构建树形结构
       const tree = buildPermissionTree(permissionList);
-      console.log('构建的权限树:', tree);
+
       setPermissions(tree);
       
       // 构建TreeSelect数据
