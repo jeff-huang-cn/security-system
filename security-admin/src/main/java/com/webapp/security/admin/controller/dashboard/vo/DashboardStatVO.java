@@ -21,6 +21,11 @@ public class DashboardStatVO {
     private long activeUsers;
 
     /**
+     * 在线用户数
+     */
+    private long onlineUsers;
+
+    /**
      * 角色总数
      */
     private long totalRoles;

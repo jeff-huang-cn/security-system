@@ -10,18 +10,18 @@
  */
 
 // HTTP配置
-export { businessApi, authApi } from './api';
+export { businessApi, authApi } from '../apis/api';
 
 // 认证服务
 export { authService } from './authService';
 
 // 业务服务
-export { userService } from './userService';
-export { roleService } from './roleService';
-export { permissionService } from './permissionService';
+export { userService } from '../apis/userService';
+export { roleService } from '../apis/roleService';
+export { permissionService } from '../apis/permissionService';
 
 // 工具类
 export { TokenManager } from './tokenManager';
 
 // 为了保持向后兼容，也导出默认的api实例
-export { default as api } from './api';
+export { default as api } from '../apis/api';

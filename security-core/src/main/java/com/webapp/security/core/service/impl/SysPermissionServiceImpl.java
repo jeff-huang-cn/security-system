@@ -138,11 +138,25 @@ public class SysPermissionServiceImpl extends ServiceImpl<SysPermissionMapper, S
     }
 
     @Override
+    public List<SysPermission> getPermissionsByType(Integer permType) {
+        List<SysPermission> permissions = baseMapper.selectByPermType(permType);
+        return buildPermissionTree(permissions);
+    }
+
+    @Override
     public List<SysPermission> getRolePermissions(Long roleId) {
         if (roleId == null) {
             return new ArrayList<>();
         }
         return baseMapper.selectByRoleId(roleId);
+    }
+
+    @Override
+    public List<SysPermission> getUserPermissions(Long userId) {
+        if (userId == null) {
+            return new ArrayList<>();
+        }
+        return baseMapper.selectByUserId(userId);
     }
 
     @Override

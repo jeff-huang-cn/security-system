@@ -25,7 +25,7 @@ import {
   FolderOutlined,
   FileOutlined
 } from '@ant-design/icons';
-import { permissionService } from '../services';
+import { permissionService } from '../apis/permissionService';
 import Permission from './common/Permission';
 import { PermissionUtil } from '../utils/permissionUtil';
 

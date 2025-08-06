@@ -26,7 +26,8 @@ public interface SysPermissionService extends IService<SysPermission> {
     boolean updatePermission(SysPermission permission);
 
     /**
-     * 删除权限（逻辑删除�?     */
+     * 删除权限（逻辑删除）
+     */
     boolean deletePermission(Long permissionId);
 
     /**
@@ -35,14 +36,19 @@ public interface SysPermissionService extends IService<SysPermission> {
     boolean updatePermissionStatus(Long permissionId, Integer status);
 
     /**
-     * 根据父权限ID获取子权限列
+     * 根据父权限ID获取子权限列表
      */
     List<SysPermission> getChildPermissions(Long parentId);
 
     /**
-     * 获取所有菜单权限（树形结构
+     * 获取所有菜单权限（树形结构）
      */
     List<SysPermission> getMenuPermissions();
+
+    /**
+     * 根据权限类型获取权限列表（树形结构）
+     */
+    List<SysPermission> getPermissionsByType(Integer permType);
 
     /**
      * 根据角色ID获取权限列表
@@ -50,13 +56,17 @@ public interface SysPermissionService extends IService<SysPermission> {
     List<SysPermission> getRolePermissions(Long roleId);
 
     /**
+     * 根据用户ID获取权限列表
+     */
+    List<SysPermission> getUserPermissions(Long userId);
+
+    /**
      * 获取所有启用的权限
      */
     List<SysPermission> getEnabledPermissions();
 
     /**
-     * 构建权限
+     * 构建权限树
      */
     List<SysPermission> buildPermissionTree(List<SysPermission> permissions);
 }
-

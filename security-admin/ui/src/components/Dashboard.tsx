@@ -21,13 +21,15 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   DashboardOutlined,
-  SettingOutlined
+  SettingOutlined,
+  MenuOutlined
 } from '@ant-design/icons';
 import UserManagement from './UserManagement';
 import RoleManagement from './RoleManagement';
 import PermissionManagement from './PermissionManagement';
 import ProtectedRoute from './common/ProtectedRoute';
 import { authService } from '../services/authService';
+import { MenuService, MenuItem, DashboardStats } from '../apis/menuService';
 
 const { Header, Sider, Content } = Layout;
 
@@ -40,6 +42,16 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [selectedKey, setSelectedKey] = useState('dashboard');
   const [userInfo, setUserInfo] = useState<any>(null);
+  const [menuItems, setMenuItems] = useState<any[]>([]);
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
+    totalUsers: 0,
+    activeUsers: 0,
+    onlineUsers: 0,
+    totalRoles: 0,
+    totalPermissions: 0,
+    recentUsers: []
+  });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // 从localStorage获取用户信息
@@ -48,7 +60,46 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     if (user) {
       setUserInfo(JSON.parse(user));
     }
+
+    // 加载菜单和统计数据
+    loadDashboardData();
   }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      
+      // 并行加载菜单和统计数据
+      const [menus, stats] = await Promise.all([
+        MenuService.getMenus(), // 获取当前用户的菜单权限
+        MenuService.getDashboardStats()
+      ]);
+
+      // 过滤有权限的菜单
+      const filteredMenus = MenuService.filterMenusByPermission(menus);
+      
+      // 转换为Ant Design Menu格式
+      const antdMenuItems = MenuService.convertToAntdMenuItems(filteredMenus);
+      
+      // 添加默认的Dashboard菜单
+      const defaultMenuItems = [
+        {
+          key: 'dashboard',
+          label: '仪表盘',
+          icon: <DashboardOutlined />
+        },
+        ...antdMenuItems
+      ];
+      
+      setMenuItems(defaultMenuItems);
+      setDashboardStats(stats);
+    } catch (error) {
+      console.error('加载仪表盘数据失败:', error);
+      message.error('加载数据失败，请刷新页面重试');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -62,37 +113,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       onLogout();
     }
   };
-
-  const menuItems = [
-    {
-      key: 'dashboard',
-      icon: <DashboardOutlined />,
-      label: '仪表盘',
-    },
-    {
-      key: 'system',
-      icon: <SettingOutlined />,
-      label: '系统管理',
-      children: [
-        {
-          key: 'users',
-          icon: <UserOutlined />,
-          label: '用户管理',
-        },
-        {
-          key: 'roles',
-          icon: <TeamOutlined />,
-          label: '角色管理',
-        },
-        {
-          key: 'permissions',
-          icon: <SafetyOutlined />,
-          label: '权限管理',
-        },
-      ],
-    },
-
-  ];
 
   const userMenuItems = [
     {
@@ -111,9 +131,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const getBreadcrumbItems = () => {
     const breadcrumbMap: { [key: string]: string[] } = {
       'dashboard': ['仪表盘'],
-      'users': ['系统管理', '用户管理'],
-      'roles': ['系统管理', '角色管理'],
-      'permissions': ['系统管理', '权限管理'],
+      'USER_MANAGE': ['系统管理', '用户管理'],
+      'ROLE_MANAGE': ['系统管理', '角色管理'],
+      'PERMISSION_MANAGE': ['系统管理', '权限管理'],
     };
     
     return breadcrumbMap[selectedKey] || ['仪表盘'];
@@ -121,19 +141,19 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
   const renderContent = () => {
     switch (selectedKey) {
-      case 'users':
+      case 'USER_MANAGE':
         return (
           <ProtectedRoute permission="USER_MANAGE">
             <UserManagement />
           </ProtectedRoute>
         );
-      case 'roles':
+      case 'ROLE_MANAGE':
         return (
           <ProtectedRoute permission="ROLE_MANAGE">
             <RoleManagement />
           </ProtectedRoute>
         );
-      case 'permissions':
+      case 'PERMISSION_MANAGE':
         return (
           <ProtectedRoute permission="PERMISSION_MANAGE">
             <PermissionManagement />
@@ -147,7 +167,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                 <Card>
                   <Statistic
                     title="总用户数"
-                    value={1128}
+                    value={dashboardStats.totalUsers}
                     prefix={<UserOutlined />}
                     valueStyle={{ color: '#3f8600' }}
                   />
@@ -157,7 +177,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                 <Card>
                   <Statistic
                     title="总角色数"
-                    value={12}
+                    value={dashboardStats.totalRoles}
                     prefix={<TeamOutlined />}
                     valueStyle={{ color: '#1890ff' }}
                   />
@@ -167,7 +187,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                 <Card>
                   <Statistic
                     title="总权限数"
-                    value={48}
+                    value={dashboardStats.totalPermissions}
                     prefix={<SafetyOutlined />}
                     valueStyle={{ color: '#722ed1' }}
                   />
@@ -177,7 +197,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                 <Card>
                   <Statistic
                     title="在线用户"
-                    value={93}
+                    value={dashboardStats.onlineUsers}
                     prefix={<UserOutlined />}
                     valueStyle={{ color: '#cf1322' }}
                   />
@@ -193,15 +213,20 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
             <Card title="快速操作">
               <Space>
-                <Button type="primary" icon={<UserOutlined />} onClick={() => setSelectedKey('users')}>
-                  用户管理
-                </Button>
-                <Button icon={<TeamOutlined />} onClick={() => setSelectedKey('roles')}>
-                  角色管理
-                </Button>
-                <Button icon={<SafetyOutlined />} onClick={() => setSelectedKey('permissions')}>
-                  权限管理
-                </Button>
+                {menuItems.filter(item => 
+                  item.key === 'USER_MANAGE' || 
+                  item.key === 'ROLE_MANAGE' || 
+                  item.key === 'PERMISSION_MANAGE'
+                ).map(item => (
+                  <Button 
+                    key={item.key}
+                    type="primary" 
+                    icon={item.icon} 
+                    onClick={() => setSelectedKey(item.key)}
+                  >
+                    {item.label}
+                  </Button>
+                ))}
               </Space>
             </Card>
           </div>
@@ -264,8 +289,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           theme="light"
           mode="inline"
           selectedKeys={[selectedKey]}
-          defaultOpenKeys={['system']}
-          items={menuItems}
+          defaultOpenKeys={[]}
+          items={loading ? [] : menuItems}
           onClick={({ key }) => setSelectedKey(key)}
           style={{ 
             borderRight: 0, 

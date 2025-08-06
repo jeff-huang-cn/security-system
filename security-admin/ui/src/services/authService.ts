@@ -1,4 +1,4 @@
-import { authApi } from './api';
+import { authApi } from '../apis/api';
 import { TokenManager } from './tokenManager';
 
 /**

@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
-import { authService } from './authService';
-import { TokenManager } from './tokenManager';
+import { authService } from '../services/authService';
+import { TokenManager } from '../services/tokenManager';
 
 // ===== API实例创建和配置 =====
 /**
