@@ -97,7 +97,8 @@ public class SecurityConfig {
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests((authorize) -> authorize
-                        .antMatchers("/login", "/logout", "/oauth2/**", "/.well-known/jwks.json")
+                        .antMatchers("/login", "/logout", "/oauth2/**", "/.well-known/jwks.json",
+                                "/api/token-blacklist/**")
                         .permitAll()
                         .anyRequest().authenticated())
                 .formLogin(form -> form

@@ -10,8 +10,10 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -53,9 +55,18 @@ public class JwtConfig {
                             })
                             .collect(Collectors.toList());
 
-                    // 将权限信息添加到JWT声明中
+                    // 生成唯一的JTI
+                    String jti = UUID.randomUUID().toString();
+                    log.info("Generated JTI for JWT: {}", jti);
+
+                    // 将权限信息和其他声明添加到JWT声明中
                     log.info("Setting authorities claim in JWT: {}", authoritiesList);
-                    context.getClaims().claim("authorities", authoritiesList);
+                    context.getClaims()
+                            .claim("jti", jti) // JWT唯一标识符
+                            .claim("authorities", authoritiesList) // 用户权限
+                            .claim("iat", Instant.now().getEpochSecond()) // 签发时间
+                            .claim("nbf", Instant.now().getEpochSecond()); // 生效时间
+                    // 注意：不设置expiresAt，让Spring Security OAuth2自动处理过期时间
                 }
             }
         };
