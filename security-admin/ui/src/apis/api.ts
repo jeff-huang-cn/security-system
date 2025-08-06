@@ -182,7 +182,7 @@ const responseErrorInterceptor = async (error: any) => {
         
         try {
           // 刷新token
-          const response = await authService.refreshToken();
+          await authService.refreshToken();
           
           // 刷新成功后立即重置标志，避免其他请求重复刷新
           tokenRefreshTriggered = false;
@@ -199,12 +199,8 @@ const responseErrorInterceptor = async (error: any) => {
           
           // 设置新的认证头
           originalRequest.headers.Authorization = `Bearer ${newToken}`;
-  
-          
-          // 确保其他可能的配置都是最新的
-          
+
           // 重新发送原始请求
-  
           return axios(originalRequest);
         } catch (refreshError) {
           console.error('Token refresh failed during 401 handling:', refreshError);
@@ -285,7 +281,7 @@ const responseErrorInterceptor = async (error: any) => {
         try {
           // 尝试刷新token
   
-          const refreshResponse = await authService.refreshToken();
+          await authService.refreshToken();
           
           // 使用新token重试
           const newToken = TokenManager.getAccessToken();

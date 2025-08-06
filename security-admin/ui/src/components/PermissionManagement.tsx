@@ -72,7 +72,7 @@ const PermissionManagement: React.FC = () => {
       // 确保结果是数组
       const permissionList: Permission[] = Array.isArray(result) ? result : [];
       
-      console.log('获取到的权限列表:', permissionList);
+      // console.log('获取到的权限列表:', permissionList);
       
       // 构建树形结构
       const tree = buildPermissionTree(permissionList);

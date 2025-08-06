@@ -58,15 +58,15 @@ export const authService = {
    * 刷新访问令牌
    * 
    * @param refreshToken 可选的刷新令牌，如果不提供则从localStorage获取
-   * @returns Promise<any> 刷新响应数据
+   * @returns Promise<void> 无返回值，成功时token已保存，失败时抛出异常
    * 
    * 执行流程：
    * 1. 获取refresh_token（参数传入或从localStorage读取）
    * 2. 直接调用SSO服务的刷新接口
-   * 3. 更新localStorage中的token
-   * 4. 返回新的token信息
+   * 3. 通过TokenManager保存新的token信息
+   * 4. 成功时无返回值，失败时抛出异常
    * 
-   * 注意：此函数主要供api.ts中的自动刷新机制调用
+   * 注意：此函数主要供api.ts中的自动刷新机制调用，调用者通过TokenManager获取token
    */
   refreshToken: async (refreshToken?: string) => {
     try {
@@ -99,8 +99,7 @@ export const authService = {
       
       // 使用TokenManager保存token信息
       TokenManager.saveTokens(access_token, newRefreshToken, expires_in);
-
-      return response.data;
+      console.error('Token refresh success:');
     } catch (error) {
       console.error('Token refresh failed:', error);
       // 刷新失败，清除token避免继续使用无效token
