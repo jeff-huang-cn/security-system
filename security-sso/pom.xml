@@ -73,6 +73,12 @@
             <artifactId>jjwt-jackson</artifactId>
         </dependency>
 
+        <!-- Jackson JSR310 Module for Java 8 Time Support -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+        </dependency>
+
         <!-- MyBatis-Plus -->
         <dependency>
             <groupId>com.baomidou</groupId>
@@ -104,10 +110,10 @@
         </dependency>
 
         <!-- Redis -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-redis</artifactId>
-        </dependency>
+<!--       <dependency>-->
+<!--           <groupId>org.springframework.boot</groupId>-->
+<!--           <artifactId>spring-boot-starter-data-redis</artifactId>-->
+<!--        </dependency>-->
 
         <!-- Hutool -->
         <dependency>

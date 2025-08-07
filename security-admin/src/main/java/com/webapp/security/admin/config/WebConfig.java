@@ -22,7 +22,7 @@ public class WebConfig implements WebMvcConfigurer {
         CorsConfiguration config = new CorsConfiguration();
 
         // 明确指定允许的前端域名
-        config.setAllowedOrigins(Arrays.asList("*"));
+        config.setAllowedOriginPatterns(Arrays.asList("*"));
 
         // 允许所有头部
         config.setAllowedHeaders(Arrays.asList("*"));
@@ -46,26 +46,26 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOrigins("*")
+                .allowedOriginPatterns("*")
                 .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true)
                 .maxAge(3600);
     }
 
-    //@Bean
-    //public WebMvcConfigurer corsConfigurer() {
-    //    return new WebMvcConfigurer() {
-    //        @Override
-    //        public void addCorsMappings(CorsRegistry registry) {
-    //            registry.addMapping("/**")
-    //                    .allowedOrigins("http://localhost:8081")
-    //                    .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-    //                    .allowedHeaders("*")
-    //                    .exposedHeaders("Authorization")
-    //                    .allowCredentials(true)
-    //                    .maxAge(3600);
-    //        }
-    //    };
-    //}
+    // @Bean
+    // public WebMvcConfigurer corsConfigurer() {
+    // return new WebMvcConfigurer() {
+    // @Override
+    // public void addCorsMappings(CorsRegistry registry) {
+    // registry.addMapping("/**")
+    // .allowedOrigins("http://localhost:8081")
+    // .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+    // .allowedHeaders("*")
+    // .exposedHeaders("Authorization")
+    // .allowCredentials(true)
+    // .maxAge(3600);
+    // }
+    // };
+    // }
 }
