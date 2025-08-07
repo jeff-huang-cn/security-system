@@ -33,51 +33,50 @@ import java.util.Arrays;
 @EnableCaching
 public class CacheConfig {
 
-        // 内存缓存配置（备用方案）
-        // @Bean
-        // public CacheManager cacheManager() {
-        // ConcurrentMapCacheManager cacheManager = new ConcurrentMapCacheManager();
-        // cacheManager.setCacheNames(Arrays.asList(
-        // "oauth2-clients-by-id",
-        // "oauth2-clients-by-client-id"
-        // ));
-        // cacheManager.setAllowNullValues(false);
-        // return cacheManager;
-        // }
+         @Bean
+         public CacheManager cacheManager() {
+             ConcurrentMapCacheManager cacheManager = new ConcurrentMapCacheManager();
+             cacheManager.setCacheNames(Arrays.asList(
+                 "oauth2-clients-by-id",
+                 "oauth2-clients-by-client-id"
+             ));
+             cacheManager.setAllowNullValues(false);
+             return cacheManager;
+         }
 
         /**
          * 创建支持Spring Security OAuth2对象的Redis序列化器
          */
-        private SpringSecurityRedisSerializer createJsonSerializer() {
-                return new SpringSecurityRedisSerializer();
-        }
+        //private SpringSecurityRedisSerializer createJsonSerializer() {
+        //        return new SpringSecurityRedisSerializer();
+        //}
 
         /**
          * SSO模块专用的Redis缓存管理器
          * 使用@Primary确保优先使用此配置
          * 使用自定义的Jackson配置处理Spring Security OAuth2对象
          */
-        @Bean
-        @Primary
-        public CacheManager cacheManager(RedisConnectionFactory factory) {
-                RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
-                                .entryTtl(Duration.ofMinutes(30)) // 缓存30分钟
-                                .serializeKeysWith(RedisSerializationContext.SerializationPair
-                                                .fromSerializer(new StringRedisSerializer()))
-                        //.serializeValuesWith(RedisSerializationContext.SerializationPair
-                        //        .fromSerializer(new GenericJackson2JsonRedisSerializer()))
-                                .serializeValuesWith(RedisSerializationContext.SerializationPair
-                                                .fromSerializer(createJsonSerializer()))
-                                .disableCachingNullValues(); // 不缓存null值
-
-                return RedisCacheManager.builder(factory)
-                                .cacheDefaults(config)
-                                .withCacheConfiguration("oauth2-clients-by-id",
-                                                config.entryTtl(Duration.ofMinutes(60))) // 客户端信息缓存1小时
-                                .withCacheConfiguration("oauth2-clients-by-client-id",
-                                                config.entryTtl(Duration.ofMinutes(60)))
-                                .withCacheConfiguration("token-blacklist",
-                                                config.entryTtl(Duration.ofDays(1))) // 黑名单缓存1天
-                                .build();
-        }
+        //@Bean
+        //@Primary
+        //public CacheManager cacheManager(RedisConnectionFactory factory) {
+        //        RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
+        //                        .entryTtl(Duration.ofMinutes(30)) // 缓存30分钟
+        //                        .serializeKeysWith(RedisSerializationContext.SerializationPair
+        //                                        .fromSerializer(new StringRedisSerializer()))
+        //                //.serializeValuesWith(RedisSerializationContext.SerializationPair
+        //                //        .fromSerializer(new GenericJackson2JsonRedisSerializer()))
+        //                        .serializeValuesWith(RedisSerializationContext.SerializationPair
+        //                                        .fromSerializer(createJsonSerializer()))
+        //                        .disableCachingNullValues(); // 不缓存null值
+        //
+        //        return RedisCacheManager.builder(factory)
+        //                        .cacheDefaults(config)
+        //                        .withCacheConfiguration("oauth2-clients-by-id",
+        //                                        config.entryTtl(Duration.ofMinutes(60))) // 客户端信息缓存1小时
+        //                        .withCacheConfiguration("oauth2-clients-by-client-id",
+        //                                        config.entryTtl(Duration.ofMinutes(60)))
+        //                        .withCacheConfiguration("token-blacklist",
+        //                                        config.entryTtl(Duration.ofDays(1))) // 黑名单缓存1天
+        //                        .build();
+        //}
 }
