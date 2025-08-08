@@ -102,13 +102,13 @@ const requestInterceptor = async (config: any) => {
           clearTimeout(tokenRefreshDebounceTimer);
           tokenRefreshDebounceTimer = null;
         }
+        console.info('Background token refresh success, token refresh debounce timer reset');
       })
       .catch(error => {
         console.error('Background token refresh failed:', error);
         // 刷新失败不影响当前请求，因为旧token仍然有效
       });
   }
-  
   // 无论刷新是否触发，都直接返回请求配置
   return config;
 };

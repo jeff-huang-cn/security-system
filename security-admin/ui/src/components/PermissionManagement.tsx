@@ -69,17 +69,17 @@ const PermissionManagement: React.FC = () => {
       // 使用新的 getAllPermissions 方法获取所有权限
       const result = await permissionService.getAllPermissions();
       
-      console.log('API返回的原始数据:', result);
+      // console.log('API返回的原始数据:', result);
       
       // 确保结果是数组
       const permissionList: Permission[] = Array.isArray(result) ? result : [];
       
-      console.log('处理后的权限列表:', permissionList);
+      // console.log('处理后的权限列表:', permissionList);
       
       // 构建树形结构
       const tree = buildPermissionTree(permissionList);
       
-      console.log('构建的树形结构:', tree);
+      // console.log('构建的树形结构:', tree);
 
       setPermissions(tree);
       
@@ -108,7 +108,7 @@ const PermissionManagement: React.FC = () => {
     const map: { [key: number]: Permission } = {};
     const tree: Permission[] = [];
 
-    console.log('构建树形结构，原始数据:', permissions);
+    // console.log('构建树形结构，原始数据:', permissions);
 
     // 创建映射
     permissions.forEach(permission => {
@@ -117,24 +117,24 @@ const PermissionManagement: React.FC = () => {
 
     // 构建树结构
     permissions.forEach(permission => {
-      console.log(`处理权限 ${permission.permName}, parentId: ${permission.parentId}`);
+      // console.log(`处理权限 ${permission.permName}, parentId: ${permission.parentId}`);
       
       if (permission.parentId === 0 || permission.parentId === null || permission.parentId === undefined) {
         // 根节点
-        console.log(`添加根节点: ${permission.permName}`);
+        // console.log(`添加根节点: ${permission.permName}`);
         tree.push(map[permission.permissionId]);
       } else if (map[permission.parentId]) {
         // 子节点
-        console.log(`添加子节点 ${permission.permName} 到父节点 ${map[permission.parentId].permName}`);
+        // console.log(`添加子节点 ${permission.permName} 到父节点 ${map[permission.parentId].permName}`);
         map[permission.parentId].children!.push(map[permission.permissionId]);
       } else {
         // 如果找不到父节点，作为根节点处理
-        console.log(`找不到父节点，将 ${permission.permName} 作为根节点`);
+        // console.log(`找不到父节点，将 ${permission.permName} 作为根节点`);
         tree.push(map[permission.permissionId]);
       }
     });
 
-    console.log('构建完成的树形结构:', tree);
+    // console.log('构建完成的树形结构:', tree);
     return tree;
   };
 
