@@ -81,15 +81,13 @@ export class TokenManager {
     }
     
     const now = Date.now();
-    const fiveMinutes = 2 * 60 * 1000; // 5分钟
+    const minutes = 5 * 60 * 1000; // 5分钟
     const timeRemaining = expiry - now;
     
-    // 只有当剩余时间小于5分钟且大于0时才需要刷新
-    // 避免刚登录就触发刷新
-    const isExpiring = timeRemaining <= fiveMinutes && timeRemaining > 0;
-    if (isExpiring) {
-
-    }
+    // 如果token已经过期或即将过期（剩余时间小于5分钟），则需要刷新
+    // 注意：如果token已过期，timeRemaining会是负数，但我们仍然需要刷新
+    const isExpiring = timeRemaining <= minutes;
+    console.log(`Token expiry check: timeRemaining=${timeRemaining}ms, fiveMinutes=${minutes}ms, isExpiring=${isExpiring}`);
     return isExpiring;
   }
 
@@ -110,9 +108,7 @@ export class TokenManager {
     const now = Date.now();
     const isExpired = now >= expiry;
     
-    if (isExpired) {
-
-    }
+    console.log(`Token expired check: now=${now}, expiry=${expiry}, isExpired=${isExpired}`);
     
     return isExpired;
   }
