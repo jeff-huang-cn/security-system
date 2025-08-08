@@ -72,7 +72,8 @@ const requestInterceptor = async (config: any) => {
     
   }
   // 检查是否需要刷新token（标志位优先判断，提高执行效率）
-  if (!tokenRefreshTriggered && TokenManager.isAuthenticated() && TokenManager.isTokenExpiringSoon()) {
+  // 修改：移除对isAuthenticated()的依赖，直接检查token状态
+  if (!tokenRefreshTriggered && TokenManager.isTokenExpiringSoon()) {
     // 设置防抖标志，5秒内不会重复刷新
     tokenRefreshTriggered = true;
     
@@ -109,6 +110,43 @@ const requestInterceptor = async (config: any) => {
         // 刷新失败不影响当前请求，因为旧token仍然有效
       });
   }
+  
+  // 如果token已过期但有refresh token，也尝试刷新
+  if (!tokenRefreshTriggered && TokenManager.getRefreshToken() && TokenManager.isTokenExpired()) {
+    console.log('Token expired, attempting to refresh with valid refresh token');
+    tokenRefreshTriggered = true;
+    
+    // 清除之前的定时器
+    if (tokenRefreshDebounceTimer) {
+      clearTimeout(tokenRefreshDebounceTimer);
+    }
+    
+    // 5秒后重置防抖标志
+    tokenRefreshDebounceTimer = setTimeout(() => {
+      tokenRefreshTriggered = false;
+      tokenRefreshDebounceTimer = null;
+    }, 5000);
+    
+    // 在后台刷新token，不阻塞当前请求
+    authService.refreshToken()
+      .then(response => {
+        // 强制重置防抖标志，表明刷新已完成，其他请求可以使用新token
+        tokenRefreshTriggered = false;
+        
+        // 清除之前的定时器
+        if (tokenRefreshDebounceTimer) {
+          clearTimeout(tokenRefreshDebounceTimer);
+          tokenRefreshDebounceTimer = null;
+        }
+        console.info('Background token refresh success (expired token), token refresh debounce timer reset');
+      })
+      .catch(error => {
+        console.error('Background token refresh failed (expired token):', error);
+        // 刷新失败不影响当前请求，让用户继续使用原token
+        // 如果原token无效，会返回401，然后跳转登录页
+      });
+  }
+  
   // 无论刷新是否触发，都直接返回请求配置
   return config;
 };

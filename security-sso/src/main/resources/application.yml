@@ -78,7 +78,7 @@ oauth2:
 # 自定义JWT配置
 custom:
   jwt:
-    enabled: true # 是否启用自定义JWT功能
+    enabled: false # 是否启用自定义JWT功能
     secret: your-secret-key-here-must-be-at-least-256-bits-long-for-security
     expiration: 3600 # 访问令牌过期时间（秒）
     refresh-expiration: 86400 # 刷新令牌过期时间（秒）

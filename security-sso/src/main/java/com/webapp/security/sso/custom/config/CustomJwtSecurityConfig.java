@@ -8,14 +8,11 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
-import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -25,7 +22,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  * 可以通过配置开关启用或禁用
  */
 @Configuration
-@EnableWebSecurity
+//@EnableWebSecurity
 @ConditionalOnProperty(name = "custom.jwt.enabled", havingValue = "true", matchIfMissing = false)
 public class CustomJwtSecurityConfig {
 
@@ -33,11 +30,13 @@ public class CustomJwtSecurityConfig {
 
     private final CustomJwtAuthenticationFilter customJwtAuthenticationFilter;
     private final CustomJwtUserDetailsService customJwtUserDetailsService;
+    private final PasswordEncoder passwordEncoder;
 
     public CustomJwtSecurityConfig(CustomJwtAuthenticationFilter customJwtAuthenticationFilter,
-            CustomJwtUserDetailsService customJwtUserDetailsService) {
+                                   CustomJwtUserDetailsService customJwtUserDetailsService, PasswordEncoder passwordEncoder) {
         this.customJwtAuthenticationFilter = customJwtAuthenticationFilter;
         this.customJwtUserDetailsService = customJwtUserDetailsService;
+        this.passwordEncoder = passwordEncoder;
         log.info("Custom JWT security configuration initialized");
     }
 
@@ -74,23 +73,7 @@ public class CustomJwtSecurityConfig {
     public DaoAuthenticationProvider customJwtAuthenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
         authProvider.setUserDetailsService(customJwtUserDetailsService);
-        authProvider.setPasswordEncoder(passwordEncoder());
+        authProvider.setPasswordEncoder(passwordEncoder);
         return authProvider;
-    }
-
-    /**
-     * 密码编码器
-     */
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-
-    /**
-     * 认证管理器
-     */
-    @Bean
-    public AuthenticationManager customJwtAuthenticationManager(AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
     }
 }
