@@ -15,7 +15,26 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, permission })
   const isAuthenticated = TokenManager.isAuthenticated();
   
   if (!isAuthenticated) {
-    return null; // 如果没有token或token已过期，返回null，由App组件处理重定向到登录页
+    console.log('ProtectedRoute: 用户未认证，显示登录提示');
+    return (
+      <div style={{ padding: 24, textAlign: 'center' }}>
+        <h2>登录已过期</h2>
+        <p>您的登录已过期，请重新登录</p>
+        <button 
+          onClick={() => window.location.href = '/login'}
+          style={{
+            padding: '8px 16px',
+            backgroundColor: '#1890ff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+        >
+          重新登录
+        </button>
+      </div>
+    );
   }
 
   // 如果指定了权限要求，需要进一步检查
@@ -29,11 +48,29 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, permission })
       : PermissionUtil.hasPermission(permission);
     
     if (!hasPermission) {
+      console.log('ProtectedRoute: 权限不足，显示权限提示');
       // 无权限访问，可以返回自定义的无权限页面
-      return <div style={{ padding: 24, textAlign: 'center' }}>
-        <h2>权限不足</h2>
-        <p>您没有访问此页面的权限</p>
-      </div>;
+      return (
+        <div style={{ padding: 24, textAlign: 'center' }}>
+          <h2>权限不足</h2>
+          <p>您没有访问此页面的权限</p>
+          <p>所需权限: {Array.isArray(permission) ? permission.join(', ') : permission}</p>
+          <button 
+            onClick={() => window.location.href = '/dashboard'}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#1890ff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              marginTop: '16px'
+            }}
+          >
+            返回首页
+          </button>
+        </div>
+      );
     }
   }
 
