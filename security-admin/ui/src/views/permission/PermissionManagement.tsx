@@ -25,9 +25,9 @@ import {
   FolderOutlined,
   FileOutlined
 } from '@ant-design/icons';
-import { permissionService } from '../apis/permissionService';
-import Permission from './common/Permission';
-import { PermissionUtil } from '../utils/permissionUtil';
+import { permissionService } from '../../apis/permissionService';
+import Permission from '../../components/common/Permission';
+import { PermissionUtil } from '../../utils/permissionUtil';
 
 const { Option } = Select;
 const { Search } = Input;
@@ -537,4 +537,4 @@ const PermissionManagement: React.FC = () => {
   );
 };
 
-export default PermissionManagement;
+export default PermissionManagement; 

@@ -44,20 +44,13 @@ export const businessApi: AxiosInstance = axios.create({
   },
 });
 
-// 简化后不再需要这些变量和函数
-// 只需要一个简单的标志来防止短时间内重复刷新
-let tokenRefreshTriggered = false;
-// 防抖计时器
-let tokenRefreshDebounceTimer: NodeJS.Timeout | null = null;
+// 使用Promise单例模式，确保同一时间只有一个刷新token的请求
+let refreshTokenPromise: Promise<any> | null = null;
 
 // ===== 请求拦截器配置 =====
 /**
  * 请求拦截器：自动添加Authorization头
  * 并在token即将过期时刷新（只由一个请求触发，其他请求不受影响）
- * 
- * 优化: 
- * 1. 同一用户的并发请求中，只有第一个请求会触发刷新
- * 2. 其他请求继续使用旧但仍有效的token，不会等待刷新完成
  */
 const requestInterceptor = async (config: any) => {
   // 如果是认证API的请求，直接返回配置
@@ -69,85 +62,48 @@ const requestInterceptor = async (config: any) => {
   const latestToken = TokenManager.getAccessToken();
   if (latestToken) {
     config.headers.Authorization = `Bearer ${latestToken}`;
-    
   }
-  // 检查是否需要刷新token（标志位优先判断，提高执行效率）
-  // 修改：移除对isAuthenticated()的依赖，直接检查token状态
-  if (!tokenRefreshTriggered && TokenManager.isTokenExpiringSoon()) {
-    // 设置防抖标志，5秒内不会重复刷新
-    tokenRefreshTriggered = true;
-    
-    // 清除之前的定时器
-    if (tokenRefreshDebounceTimer) {
-      clearTimeout(tokenRefreshDebounceTimer);
-    }
-    
-    // 5秒后重置防抖标志
-    tokenRefreshDebounceTimer = setTimeout(() => {
-      tokenRefreshTriggered = false;
-      tokenRefreshDebounceTimer = null;
-    }, 5000);
-    
-    
-    
-    // 在后台刷新token，不阻塞当前请求
-    authService.refreshToken()
-      .then(response => {
 
-        
-        // 强制重置防抖标志，表明刷新已完成，其他请求可以使用新token
-        tokenRefreshTriggered = false;
-        
-        // 清除之前的定时器
-        if (tokenRefreshDebounceTimer) {
-          clearTimeout(tokenRefreshDebounceTimer);
-          tokenRefreshDebounceTimer = null;
-        }
-        console.info('Background token refresh success, token refresh debounce timer reset');
-      })
-      .catch(error => {
-        console.error('Background token refresh failed:', error);
-        // 刷新失败不影响当前请求，因为旧token仍然有效
-      });
-  }
-  
-  // 如果token已过期但有refresh token，也尝试刷新
-  if (!tokenRefreshTriggered && TokenManager.getRefreshToken() && TokenManager.isTokenExpired()) {
-    console.log('Token expired, attempting to refresh with valid refresh token');
-    tokenRefreshTriggered = true;
-    
-    // 清除之前的定时器
-    if (tokenRefreshDebounceTimer) {
-      clearTimeout(tokenRefreshDebounceTimer);
+  // 如果token即将过期，尝试刷新
+  const refreshTokenIfNeeded = async () => {
+    // 如果已经有一个刷新请求在进行中，直接返回该Promise
+    if (refreshTokenPromise) {
+      console.log('Token refresh already in progress, reusing existing promise');
+      return refreshTokenPromise;
     }
-    
-    // 5秒后重置防抖标志
-    tokenRefreshDebounceTimer = setTimeout(() => {
-      tokenRefreshTriggered = false;
-      tokenRefreshDebounceTimer = null;
-    }, 5000);
-    
-    // 在后台刷新token，不阻塞当前请求
-    authService.refreshToken()
+
+    console.log('Starting new token refresh');
+    // 创建新的刷新Promise
+    refreshTokenPromise = authService.refreshToken()
       .then(response => {
-        // 强制重置防抖标志，表明刷新已完成，其他请求可以使用新token
-        tokenRefreshTriggered = false;
-        
-        // 清除之前的定时器
-        if (tokenRefreshDebounceTimer) {
-          clearTimeout(tokenRefreshDebounceTimer);
-          tokenRefreshDebounceTimer = null;
-        }
-        console.info('Background token refresh success (expired token), token refresh debounce timer reset');
+        console.info('Token refresh success');
+        return response;
       })
       .catch(error => {
-        console.error('Background token refresh failed (expired token):', error);
-        // 刷新失败不影响当前请求，让用户继续使用原token
-        // 如果原token无效，会返回401，然后跳转登录页
+        console.error('Token refresh failed:', error);
+        throw error;
+      })
+      .finally(() => {
+        // 5秒后清除Promise，允许新的刷新请求
+        setTimeout(() => {
+          refreshTokenPromise = null;
+          console.log('Token refresh promise cleared, allowing new refresh');
+        }, 5000);
       });
+
+    return refreshTokenPromise;
+  };
+  
+  // 检查是否需要刷新token
+  if (TokenManager.isTokenExpiringSoon()) {
+    console.log('Token expiring soon, attempting refresh');
+    // 不阻塞当前请求，在后台刷新token
+    refreshTokenIfNeeded().catch(() => {
+      // 错误已在refreshTokenIfNeeded中处理
+    });
   }
   
-  // 无论刷新是否触发，都直接返回请求配置
+  // 无论是否触发刷新，都返回配置继续请求
   return config;
 };
 
@@ -194,61 +150,65 @@ const responseErrorInterceptor = async (error: any) => {
   // 处理HTTP错误
   if (error.response) {
     const { status } = error.response;
-      debugger
-      // 处理401错误 - 未授权
-      if (status === 401) {
-        // 如果是认证API的请求，不进行刷新尝试
-        if (originalRequest._isAuthApi) {
-          console.log('Auth API request unauthorized (401), redirecting to login page');
-          TokenManager.clearTokens();
-          window.location.href = '/login';
-          return Promise.reject(error);
-        }
-        
-        // 如果请求已经重试过一次，不要继续刷新，直接清除token并跳转登录
-        if (originalRequest._retry) {
-          console.log('已重试过请求但仍失败(401)，清除token并跳转登录');
-          TokenManager.clearTokens();
-          window.location.href = '/login';
-          return Promise.reject(error);
-        }
-        
-        console.log('Request unauthorized (401), attempting to refresh token');
-        
-        // 标记请求已经重试过，避免无限循环
-        originalRequest._retry = true;
-        
-        try {
-          // 刷新token
-          await authService.refreshToken();
-          
-          // 刷新成功后立即重置标志，避免其他请求重复刷新
-          tokenRefreshTriggered = false;
-          if (tokenRefreshDebounceTimer) {
-            clearTimeout(tokenRefreshDebounceTimer);
-            tokenRefreshDebounceTimer = null;
-          }
-          
-          // 更新失败请求的Authorization头，总是使用最新的token
-          const newToken = TokenManager.getAccessToken(); // 从TokenManager获取刷新后的token
-          if (!newToken) {
-            throw new Error('Failed to get new token after refresh');
-          }
-          
-          // 设置新的认证头
-          originalRequest.headers.Authorization = `Bearer ${newToken}`;
 
-          // 重新发送原始请求
-          return axios(originalRequest);
-        } catch (refreshError) {
-          console.error('Token refresh failed during 401 handling:', refreshError);
-          
-          // 如果刷新token失败，清除token并跳转到登录页
-          TokenManager.clearTokens();
-          window.location.href = '/login';
-          
-          return Promise.reject(refreshError);
+    // 处理401错误 - 未授权
+    if (status === 401) {
+      // 如果是认证API的请求，不进行刷新尝试
+      if (originalRequest._isAuthApi) {
+        console.log('Auth API request unauthorized (401), redirecting to login page');
+        TokenManager.clearTokens();
+        window.location.replace('/login'); // 使用replace防止历史记录问题
+        return Promise.reject(error);
+      }
+      
+      // 如果请求已经重试过一次，不要继续刷新，直接清除token并跳转登录
+      if (originalRequest._retry) {
+        console.log('已重试过请求但仍失败(401)，清除token并跳转登录');
+        TokenManager.clearTokens();
+        window.location.replace('/login'); // 使用replace防止历史记录问题
+        return Promise.reject(error);
+      }
+      
+      console.log('Request unauthorized (401), attempting to refresh token');
+      
+      // 标记请求已经重试过，避免无限循环
+      originalRequest._retry = true;
+      
+      try {
+        // 使用Promise单例模式刷新token
+        if (!refreshTokenPromise) {
+          refreshTokenPromise = authService.refreshToken()
+            .finally(() => {
+              // 5秒后清除Promise，允许新的刷新请求
+              setTimeout(() => {
+                refreshTokenPromise = null;
+              }, 5000);
+            });
         }
+        
+        // 等待刷新完成
+        await refreshTokenPromise;
+        
+        // 更新失败请求的Authorization头，总是使用最新的token
+        const newToken = TokenManager.getAccessToken(); // 从TokenManager获取刷新后的token
+        if (!newToken) {
+          throw new Error('Failed to get new token after refresh');
+        }
+        
+        // 设置新的认证头
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+
+        // 重新发送原始请求
+        return axios(originalRequest);
+      } catch (refreshError) {
+        console.error('Token refresh failed during 401 handling:', refreshError);
+        
+        // 如果刷新token失败，清除token并跳转到登录页
+        TokenManager.clearTokens();
+        window.location.replace('/login'); // 使用replace防止历史记录问题
+        
+        return Promise.reject(refreshError);
+      }
     } 
     // 处理403错误 - 权限不足
     else if (status === 403) {
@@ -284,9 +244,9 @@ const responseErrorInterceptor = async (error: any) => {
       if (errorMessage.toLowerCase().includes('token') || 
           errorMessage.toLowerCase().includes('auth') || 
           errorMessage.toLowerCase().includes('unauthorized')) {
-        console.log('Token可能无效，尝试清除并跳转登录页');
-        TokenManager.clearTokens();
-        window.location.href = '/login';
+                  console.log('Token可能无效，尝试清除并跳转登录页');
+          TokenManager.clearTokens();
+          window.location.replace('/login'); // 使用replace防止历史记录问题
       }
     }
     // 处理404错误 - 资源不存在
@@ -330,13 +290,13 @@ const responseErrorInterceptor = async (error: any) => {
         } catch (refreshError) {
           console.error('Token刷新失败，跳转到登录页:', refreshError);
           TokenManager.clearTokens();
-          window.location.href = '/login';
+          window.location.replace('/login'); // 使用replace防止历史记录问题
         }
       } else {
         // 如果已经尝试过一次，就清除token并重定向
         console.log('多次尝试失败，可能是token无效，跳转到登录页');
         TokenManager.clearTokens();
-        window.location.href = '/login';
+        window.location.replace('/login'); // 使用replace防止历史记录问题
       }
     }
   }

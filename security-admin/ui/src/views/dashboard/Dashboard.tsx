@@ -22,14 +22,20 @@ import {
   MenuUnfoldOutlined,
   DashboardOutlined,
   SettingOutlined,
-  MenuOutlined
+  MenuOutlined,
+  ApiOutlined,
+  KeyOutlined,
+  AppstoreOutlined
 } from '@ant-design/icons';
-import UserManagement from './UserManagement';
-import RoleManagement from './RoleManagement';
-import PermissionManagement from './PermissionManagement';
-import ProtectedRoute from './common/ProtectedRoute';
-import { authService } from '../services/authService';
-import { MenuService, MenuItem, DashboardStats } from '../apis/menuService';
+import UserManagement from '../../views/user/UserManagement';
+import RoleManagement from '../../views/role/RoleManagement';
+import PermissionManagement from '../../views/permission/PermissionManagement';
+import CredentialManagement from '../../views/credential/CredentialManagement';
+import ResourceManagement from '../../views/resource/ResourceManagement';
+import PermissionAssignment from '../../views/permission/PermissionAssignment';
+import ProtectedRoute from '../../components/common/ProtectedRoute';
+import { authService } from '../../services/authService';
+import { MenuService, MenuItem, DashboardStats } from '../../apis/menuService';
 
 const { Header, Sider, Content } = Layout;
 
@@ -75,8 +81,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         MenuService.getDashboardStats()
       ]);
 
+      // 确保menus是数组类型
+      const menuArray = Array.isArray(menus) ? menus : [];
+      console.log('加载的菜单数据:', menuArray.length, '个菜单项');
+      
       // 过滤有权限的菜单
-      const filteredMenus = MenuService.filterMenusByPermission(menus);
+      const filteredMenus = MenuService.filterMenusByPermission(menuArray);
       
       // 转换为Ant Design Menu格式
       const antdMenuItems = MenuService.convertToAntdMenuItems(filteredMenus);
@@ -134,6 +144,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       'USER_MANAGE': ['系统管理', '用户管理'],
       'ROLE_MANAGE': ['系统管理', '角色管理'],
       'PERMISSION_MANAGE': ['系统管理', '权限管理'],
+      'CLIENT_CREDENTIAL_MANAGE': ['OpenAPI管理', '客户端凭证'],
+      'API_RESOURCE_MANAGE': ['OpenAPI管理', 'API资源'],
+      'API_PERMISSION_ASSIGN': ['OpenAPI管理', 'API权限分配'],
     };
     
     return breadcrumbMap[selectedKey] || ['仪表盘'];
@@ -157,6 +170,27 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         return (
           <ProtectedRoute permission="PERMISSION_MANAGE">
             <PermissionManagement />
+          </ProtectedRoute>
+        );
+      case 'CLIENT_CREDENTIAL_MANAGE':
+      case 'OPENAPI_CREDENTIAL':
+        return (
+          <ProtectedRoute permission="OPENAPI_CREDENTIAL_QUERY">
+            <CredentialManagement />
+          </ProtectedRoute>
+        );
+      case 'API_RESOURCE_MANAGE':
+      case 'OPENAPI_RESOURCE':
+        return (
+          <ProtectedRoute permission="OPENAPI_RESOURCE_QUERY">
+            <ResourceManagement />
+          </ProtectedRoute>
+        );
+      case 'API_PERMISSION_ASSIGN':
+      case 'OPENAPI_PERMISSION':
+        return (
+          <ProtectedRoute permission="OPENAPI_PERMISSION_QUERY">
+            <PermissionAssignment />
           </ProtectedRoute>
         );
       default:
@@ -216,7 +250,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                 {menuItems.filter(item => 
                   item.key === 'USER_MANAGE' || 
                   item.key === 'ROLE_MANAGE' || 
-                  item.key === 'PERMISSION_MANAGE'
+                  item.key === 'PERMISSION_MANAGE' ||
+                  item.key === 'CLIENT_CREDENTIAL_MANAGE' ||
+                  item.key === 'API_RESOURCE_MANAGE' ||
+                  item.key === 'API_PERMISSION_ASSIGN'
                 ).map(item => (
                   <Button 
                     key={item.key}
@@ -363,4 +400,4 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   );
 };
 
-export default Dashboard;
+export default Dashboard; 

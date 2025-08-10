@@ -7,7 +7,10 @@ import {
   TeamOutlined,
   SafetyOutlined,
   SettingOutlined,
-  MenuOutlined
+  MenuOutlined,
+  ApiOutlined,
+  KeyOutlined,
+  AppstoreOutlined
 } from '@ant-design/icons';
 
 export interface MenuItem {
@@ -18,6 +21,7 @@ export interface MenuItem {
   permType: number;
   parentId?: number;
   permPath?: string;
+  icon?: string; // 数据库中的图标
   status: number;
   sortOrder: number;
   children?: MenuItem[];
@@ -121,7 +125,7 @@ export class MenuService {
     return menus.map(menu => ({
       key: menu.permCode,
       label: menu.permName,
-      icon: this.getMenuIcon(menu.permCode),
+      icon: this.getMenuIcon(menu.permCode, menu),
       children: menu.children ? this.convertToAntdMenuItems(menu.children) : undefined
     }));
   }
@@ -130,16 +134,41 @@ export class MenuService {
    * 根据权限编码获取菜单图标
    * @param permCode 权限编码
    */
-  private static getMenuIcon(permCode: string): any {
+  private static getMenuIcon(permCode: string, menu?: MenuItem): any {
+    // 优先使用数据库中的图标（如果存在）
+    if (menu && menu.icon) {
+      // 尝试获取Ant Design图标
+      try {
+        // 根据图标名称获取组件
+        const iconName = menu.icon.trim();
+        const IconComponent = require('@ant-design/icons')[iconName];
+        if (IconComponent) {
+          return React.createElement(IconComponent);
+        }
+      } catch (error) {
+        console.warn(`图标 ${menu.icon} 不存在，使用默认图标`, error);
+      }
+    }
+    
     const iconMap: { [key: string]: any } = {
       'DASHBOARD': DashboardOutlined,
       'USER': UserOutlined,
       'ROLE': TeamOutlined,
       'PERMISSION': SafetyOutlined,
-      'SYSTEM': SettingOutlined
+      'SYSTEM': SettingOutlined,
+      'OPENAPI': ApiOutlined,
+      'OPENAPI_MANAGE': ApiOutlined,
+      'OPENAPI_CREDENTIAL': KeyOutlined,
+      'OPENAPI_RESOURCE': AppstoreOutlined,
+      'OPENAPI_PERMISSION': SafetyOutlined
     };
 
-    // 查找匹配的图标
+    // 直接匹配完整的权限编码
+    if (iconMap[permCode]) {
+      return React.createElement(iconMap[permCode]);
+    }
+    
+    // 部分匹配
     for (const [key, IconComponent] of Object.entries(iconMap)) {
       if (permCode.toUpperCase().includes(key)) {
         return React.createElement(IconComponent);

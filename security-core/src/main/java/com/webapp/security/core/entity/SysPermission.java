@@ -58,6 +58,12 @@ public class SysPermission {
     private String permPath;
 
     /**
+     * 菜单图标
+     */
+    @TableField("icon")
+    private String icon;
+
+    /**
      * 权限状态：0-禁用 1-启用
      */
     @TableField("status")

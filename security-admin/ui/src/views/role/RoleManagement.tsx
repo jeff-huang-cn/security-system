@@ -25,9 +25,9 @@ import {
   ReloadOutlined,
   SettingOutlined
 } from '@ant-design/icons';
-import { roleService, permissionService } from '../services';
-import Permission from './common/Permission';
-import { PermissionUtil } from '../utils/permissionUtil';
+import { roleService, permissionService } from '../../services';
+import Permission from '../../components/common/Permission';
+import { PermissionUtil } from '../../utils/permissionUtil';
 
 const { Option } = Select;
 const { Search } = Input;
@@ -635,4 +635,4 @@ const RoleManagement: React.FC = () => {
   );
 };
 
-export default RoleManagement;
+export default RoleManagement; 

@@ -139,6 +139,7 @@ public class DashboardFacade {
         menuVO.setPermType(permission.getPermType());
         menuVO.setParentId(permission.getParentId());
         menuVO.setPermPath(permission.getPermPath());
+        menuVO.setIcon(permission.getIcon());
         menuVO.setStatus(permission.getStatus());
         menuVO.setSortOrder(permission.getSortOrder());
 

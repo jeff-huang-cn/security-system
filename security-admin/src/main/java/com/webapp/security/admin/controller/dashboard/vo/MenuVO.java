@@ -45,6 +45,11 @@ public class MenuVO {
     private String permPath;
 
     /**
+     * 菜单图标
+     */
+    private String icon;
+
+    /**
      * 权限状态
      */
     private Integer status;
