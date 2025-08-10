@@ -9,5 +9,5 @@ public interface SysCredentialResourceRelService extends IService<SysCredentialR
 
     List<Long> listResourceIdsByCredentialId(Long credentialId);
 
-    void replaceAssignments(Long credentialId, List<Long> resourceIds, String operator);
+    void replaceAssignments(Long credentialId, List<Long> resourceIds);
 }

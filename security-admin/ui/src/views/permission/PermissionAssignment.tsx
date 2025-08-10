@@ -112,8 +112,7 @@ const PermissionAssignment: React.FC = () => {
     try {
       setSaveLoading(true);
       const resourceIds = selectedKeys.map(key => parseInt(key.toString()));
-      const username = localStorage.getItem('username') || 'admin';
-      await credentialService.assignResources(selectedCredential, resourceIds, username);
+      await credentialService.assignResources(selectedCredential, resourceIds);
       message.success('权限分配成功');
     } catch (error) {
       console.error('保存权限分配失败:', error);

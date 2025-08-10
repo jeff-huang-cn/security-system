@@ -31,7 +31,7 @@ public class SysCredentialResourceRelController {
     @PreAuthorize("hasAuthority('OPENAPI_PERMISSION_ASSIGN')")
     @Transactional
     public ResponseResult<Void> assign(@PathVariable Long credentialId, @Validated @RequestBody AssignDTO dto) {
-        relService.replaceAssignments(credentialId, dto.getResourceIds(), dto.getOperator());
+        relService.replaceAssignments(credentialId, dto.getResourceIds());
         return ResponseResult.success(null, "授权成功");
     }
 }

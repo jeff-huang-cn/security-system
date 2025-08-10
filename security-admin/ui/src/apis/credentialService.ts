@@ -41,8 +41,8 @@ export const credentialService = {
   /**
    * 更新客户端凭证状态
    */
-  updateStatus: async (appId: string, status: number, operator: string): Promise<void> => {
-    await apiClient.patch(`/api/sys-client-credentials/${appId}/status?status=${status}&operator=${operator}`);
+  updateStatus: async (appId: string, status: number): Promise<void> => {
+    await apiClient.patch(`/api/sys-client-credentials/${appId}/status?status=${status}`);
   },
   
   /**
@@ -55,10 +55,9 @@ export const credentialService = {
   /**
    * 为客户端凭证分配API资源权限
    */
-  assignResources: async (credentialId: number, resourceIds: number[], operator: string): Promise<void> => {
+  assignResources: async (credentialId: number, resourceIds: number[]): Promise<void> => {
     await apiClient.post(`/api/sys-credential-resource-rel/${credentialId}/assign`, {
-      resourceIds,
-      operator
+      resourceIds
     });
   }
 };

@@ -142,8 +142,7 @@ const CredentialManagement: React.FC = () => {
   const handleStatusChange = async (record: CredentialVO, checked: boolean) => {
     try {
       const status = checked ? 1 : 0;
-      const username = localStorage.getItem('username') || 'admin';
-      await credentialService.updateStatus(record.appId, status, username);
+      await credentialService.updateStatus(record.appId, status);
       message.success(`${checked ? '启用' : '禁用'}成功`);
       loadCredentials();
     } catch (error) {
@@ -217,8 +216,7 @@ const CredentialManagement: React.FC = () => {
     try {
       setTransferLoading(true);
       const resourceIds = selectedKeys.map(key => parseInt(key.toString()));
-      const username = localStorage.getItem('username') || 'admin';
-      await credentialService.assignResources(selectedCredential, resourceIds, username);
+      await credentialService.assignResources(selectedCredential, resourceIds);
       message.success('权限分配成功');
       setAssignModalVisible(false);
     } catch (error) {

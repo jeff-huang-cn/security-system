@@ -23,7 +23,7 @@ public class SysCredentialResourceRelServiceImpl
     }
 
     @Override
-    public void replaceAssignments(Long credentialId, List<Long> resourceIds, String operator) {
+    public void replaceAssignments(Long credentialId, List<Long> resourceIds) {
         // 删除旧的
         this.remove(new LambdaQueryWrapper<SysCredentialResourceRel>()
                 .eq(SysCredentialResourceRel::getCredentialId, credentialId));
@@ -32,7 +32,6 @@ public class SysCredentialResourceRelServiceImpl
             SysCredentialResourceRel rel = new SysCredentialResourceRel();
             rel.setCredentialId(credentialId);
             rel.setResourceId(rid);
-            rel.setCreateBy(operator);
             this.save(rel);
         }
     }
