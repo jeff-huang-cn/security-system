@@ -49,7 +49,7 @@ const ResourceManagement: React.FC = () => {
       const response = await resourceService.paged(pagedDTO);
       if (response && typeof response === 'object') {
         if ('records' in response && Array.isArray(response.records)) {
-          setResources(response.records);
+      setResources(response.records);
           setTotal(response.total || 0);
         } else if ('list' in response && Array.isArray(response.list)) {
           setResources(response.list);

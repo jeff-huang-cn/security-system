@@ -19,7 +19,7 @@ public class SysClientCredentialServiceImpl extends ServiceImpl<SysClientCredent
         implements SysClientCredentialService {
 
     private final SysClientCredentialMapper credentialMapper;
-    private static final BCryptPasswordEncoder ENCODER = new BCryptPasswordEncoder();
+    private final BCryptPasswordEncoder passwordEncoder;
     private static final SecureRandom RANDOM = new SecureRandom();
 
     @Override
@@ -40,15 +40,10 @@ public class SysClientCredentialServiceImpl extends ServiceImpl<SysClientCredent
     public SysClientCredential createCredential(String remark) {
         String appId = generateId();
         String plain = generateSecret();
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = auth != null ? auth.getName() : null;
-
         SysClientCredential entity = new SysClientCredential();
         entity.setAppId(appId);
-        entity.setAppSecret(ENCODER.encode(plain));
+        entity.setAppSecret(passwordEncoder.encode(plain));
         entity.setClientId("openapi");
-        entity.setCreateBy(username);
-        entity.setUpdateBy(username);
         entity.setRemark(remark);
         entity.setStatus(1);
         this.save(entity);
@@ -84,7 +79,7 @@ public class SysClientCredentialServiceImpl extends ServiceImpl<SysClientCredent
 
         SysClientCredential entity = new SysClientCredential();
         entity.setAppId(appId);
-        entity.setAppSecret(ENCODER.encode(plainSecret));
+        entity.setAppSecret(passwordEncoder.encode(plainSecret));
         entity.setClientId("openapi");
         entity.setCreateBy(username);
         entity.setUpdateBy(username);

@@ -82,3 +82,8 @@ custom:
     secret: your-secret-key-here-must-be-at-least-256-bits-long-for-security
     expiration: 3600 # 访问令牌过期时间（秒）
     refresh-expiration: 86400 # 刷新令牌过期时间（秒）
+
+# 令牌有效期配置（秒）
+sso:
+  token:
+    expiration: 86400

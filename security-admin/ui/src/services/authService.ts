@@ -87,39 +87,39 @@ export const authService = {
     
     // 创建新的刷新Promise并保存到单例变量
     refreshTokenPromise = (async () => {
-      try {
-        const token = refreshToken || TokenManager.getRefreshToken();
-        if (!token) {
-          throw new Error('No refresh token available');
-        }
+    try {
+      const token = refreshToken || TokenManager.getRefreshToken();
+      if (!token) {
+        throw new Error('No refresh token available');
+      }
 
-        const response = await authApi.post('/oauth2/refresh', {
-          refreshToken: token
-        });
+      const response = await authApi.post('/oauth2/refresh', {
+        refreshToken: token
+      });
 
-        // 更新本地存储的token
-        const { access_token, refresh_token: newRefreshToken } = response.data;
-        
-        if (!access_token) {
-          throw new Error('Refresh response missing access_token');
-        }
-        
-        // 解析过期时间，确保它是一个数字
-        let expires_in = response.data.expires_in;
-        if (typeof expires_in === 'string') {
-          expires_in = parseInt(expires_in, 10);
-        }
-        
-        // 使用TokenManager保存token信息
-        TokenManager.saveTokens(access_token, newRefreshToken, expires_in);
-        console.info('Token refresh success, new access token saved');
+      // 更新本地存储的token
+      const { access_token, refresh_token: newRefreshToken } = response.data;
+      
+      if (!access_token) {
+        throw new Error('Refresh response missing access_token');
+      }
+      
+      // 解析过期时间，确保它是一个数字
+      let expires_in = response.data.expires_in;
+      if (typeof expires_in === 'string') {
+        expires_in = parseInt(expires_in, 10);
+      }
+      
+      // 使用TokenManager保存token信息
+      TokenManager.saveTokens(access_token, newRefreshToken, expires_in);
+      console.info('Token refresh success, new access token saved');
         
         return response.data;
-      } catch (error) {
-        console.error('Token refresh failed:', error);
-        // 刷新失败，清除token避免继续使用无效token
-        TokenManager.clearTokens();
-        throw error; // 重新抛出错误，让调用者处理
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      // 刷新失败，清除token避免继续使用无效token
+      TokenManager.clearTokens();
+      throw error; // 重新抛出错误，让调用者处理
       } finally {
         // 5秒后清除Promise引用，允许新的刷新请求
         setTimeout(() => {
