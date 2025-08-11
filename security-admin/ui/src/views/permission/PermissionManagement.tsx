@@ -413,9 +413,9 @@ const PermissionManagement: React.FC = () => {
             defaultExpandAllRows: true, // 默认展开所有节点
           }}
           scroll={{ x: 1200 }}
-          onRow={(record) => ({
-            onClick: () => console.log('点击行:', record)
-          })}
+          // onRow={(record) => ({
+          //   onClick: () => console.log('点击行:', record)
+          // })}
         />
       </Card>
 
