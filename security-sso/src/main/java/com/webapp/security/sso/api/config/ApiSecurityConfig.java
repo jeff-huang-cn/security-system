@@ -30,16 +30,6 @@ public class ApiSecurityConfig {
     private final TokenService tokenService;
     private final ObjectMapper objectMapper;
 
-    /**
-     * 配置密码编码器
-     * 注意：此配置必须与admin服务中SysClientCredentialServiceImpl使用的配置一致
-     * 默认工作因子为10，与admin中static final ENCODER一致
-     * 
-     * 使用@Primary确保此Bean被优先注入
-     * 使用@ConditionalOnMissingBean避免与现有Bean冲突
-     * 
-     * @return 与admin服务兼容的密码编码器
-     */
     @Bean
     @ConditionalOnMissingBean(name = "tokenPasswordEncoder")
     public PasswordEncoder tokenPasswordEncoder() {
@@ -48,7 +38,7 @@ public class ApiSecurityConfig {
     }
 
     @Bean
-    @DependsOn("tokenPasswordEncoder")
+    @DependsOn({"tokenPasswordEncoder", "tokenServiceImpl"})
     public TokenAuthenticationFilter tokenAuthenticationFilter() {
         return new TokenAuthenticationFilter(tokenService, objectMapper);
     }
