@@ -1,0 +1,31 @@
+### 环境变量设置
+@baseUrl = http://localhost:9000
+@appId = GDFtTPPXiIO5jCCe
+@appSecret = RD3635OvoWKAlepK_EH5uTDWIIVRCNx0
+@token = your_access_token_here
+
+### 获取访问令牌
+# 使用Basic认证请求令牌
+# 注意: 在实际HTTP客户端中，需手动对appId:appSecret进行Base64编码
+GET {{baseUrl}}/api/v1/token
+Authorization: Basic R0RGdFRQUFhpSU81akNDZTpSRDM2MzVPdm9XS0FsZXBLX0VINXVURFFJSVZSQ054MA==
+
+### 验证令牌有效性（供OpenAPI服务调用）
+POST {{baseUrl}}/api/v1/validate
+Content-Type: application/x-www-form-urlencoded
+
+token={{token}}
+
+### 验证无效令牌
+POST {{baseUrl}}/api/v1/validate
+Content-Type: application/x-www-form-urlencoded
+
+token=invalid_token_here
+
+### 获取令牌（使用openapi客户端）
+# 需要替换为实际编码后的值
+GET {{baseUrl}}/api/v1/token
+Authorization: Basic b3BlbmFwaTpzZWNyZXQ=
+
+### 没有认证头的请求示例
+GET {{baseUrl}}/api/v1/token 
