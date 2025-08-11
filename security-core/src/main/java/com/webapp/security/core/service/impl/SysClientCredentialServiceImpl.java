@@ -53,18 +53,61 @@ public class SysClientCredentialServiceImpl extends ServiceImpl<SysClientCredent
         entity.setStatus(1);
         this.save(entity);
 
-        // 将明文暂存在 transient 字段或返回由 controller 自行管理（此处仅返回实体）
+        // 临时保存明文密钥以返回给客户端
+        entity.setPlainSecret(plain);
+
         return entity;
     }
 
     @Override
-    public boolean updateStatus(String appId, Integer status, String operator) {
+    public SysClientCredential generateCredential() {
+        String appId = generateId();
+        String plainSecret = generateSecret();
+
+        SysClientCredential entity = new SysClientCredential();
+        entity.setAppId(appId);
+        entity.setPlainSecret(plainSecret); // 设置明文密钥，但不保存到数据库
+
+        return entity;
+    }
+
+    @Override
+    public SysClientCredential saveCredential(String appId, String plainSecret, String remark) {
+        // 验证appId是否已存在
+        SysClientCredential existing = credentialMapper.findByAppId(appId);
+        if (existing != null) {
+            throw new IllegalArgumentException("AppID已存在");
+        }
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth != null ? auth.getName() : null;
+
+        SysClientCredential entity = new SysClientCredential();
+        entity.setAppId(appId);
+        entity.setAppSecret(ENCODER.encode(plainSecret));
+        entity.setClientId("openapi");
+        entity.setCreateBy(username);
+        entity.setUpdateBy(username);
+        entity.setRemark(remark);
+        entity.setStatus(1);
+        this.save(entity);
+
+        // 临时保存明文密钥以返回给客户端
+        entity.setPlainSecret(plainSecret);
+
+        return entity;
+    }
+
+    @Override
+    public void updateStatus(String appId, Integer status) {
         SysClientCredential cred = credentialMapper.findByAppId(appId);
         if (cred == null)
-            return false;
+            throw new RuntimeException("凭证不存在: " + appId);
         cred.setStatus(status);
-        cred.setUpdateBy(operator);
-        return credentialMapper.updateById(cred) > 0;
+        boolean updated = credentialMapper.updateById(cred) > 0;
+        if (!updated) {
+            throw new RuntimeException("更新状态失败");
+        }
     }
 
     private String generateId() {

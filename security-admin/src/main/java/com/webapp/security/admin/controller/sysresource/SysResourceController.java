@@ -29,43 +29,68 @@ public class SysResourceController {
     @PostMapping("/paged")
     @PreAuthorize("hasAuthority('OPENAPI_RESOURCE_QUERY')")
     public ResponseResult<PagedResult<ResourceVO>> paged(@RequestBody PagedDTO paged) {
+        // 使用Controller层处理分页逻辑，便于扩展
         Page<SysResource> page = new Page<>(paged.getPageNum(), paged.getPageSize());
         String keyword = paged.getKeyword();
         LambdaQueryWrapper<SysResource> qw = new LambdaQueryWrapper<SysResource>()
                 .like(StrUtil.isNotBlank(keyword), SysResource::getResourceCode, keyword)
                 .or(StrUtil.isNotBlank(keyword), c -> c.like(SysResource::getResourceName, keyword)
                         .or().like(SysResource::getResourcePath, keyword));
+
+        // 调用基础Service方法执行查询
         Page<SysResource> result = resourceService.page(page, qw);
-        return ResponseResult
-                .success(new PagedResult<>(resourceConverter.toVOList(result.getRecords()), result.getTotal()));
+
+        // 转换为VO并返回
+        return ResponseResult.success(
+                new PagedResult<>(resourceConverter.toVOList(result.getRecords()), result.getTotal()));
     }
 
     @GetMapping("/all")
     @PreAuthorize("hasAuthority('OPENAPI_RESOURCE_QUERY')")
     public ResponseResult<List<ResourceVO>> all() {
-        return ResponseResult.success(resourceConverter.toVOList(resourceService.list()));
+        // 调用Service获取所有资源
+        List<SysResource> resources = resourceService.list();
+        // 转换为VO并返回
+        return ResponseResult.success(resourceConverter.toVOList(resources));
     }
 
     @PostMapping
     @PreAuthorize("hasAuthority('OPENAPI_RESOURCE_CREATE')")
     public ResponseResult<Void> create(@Validated @RequestBody ResourceDTO dto) {
-        SysResource res = resourceConverter.fromDTO(dto);
-        return resourceService.save(res) ? ResponseResult.success(null, "创建成功") : ResponseResult.failed("创建失败");
+        try {
+            // 转换DTO到实体
+            SysResource resource = resourceConverter.fromDTO(dto);
+            // 调用Service创建资源
+            resourceService.createResource(resource);
+            return ResponseResult.success(null, "创建成功");
+        } catch (Exception e) {
+            return ResponseResult.failed("创建失败: " + e.getMessage());
+        }
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('OPENAPI_RESOURCE_UPDATE')")
     public ResponseResult<Void> update(@PathVariable("id") Long id, @Validated @RequestBody ResourceDTO dto) {
-        SysResource res = resourceService.getById(id);
-        if (res == null)
-            return ResponseResult.failed("不存在");
-        resourceConverter.updateEntityFromDTO(dto, res);
-        return resourceService.updateById(res) ? ResponseResult.success(null, "更新成功") : ResponseResult.failed("更新失败");
+        try {
+            // 转换DTO到实体
+            SysResource resource = resourceConverter.fromDTO(dto);
+            // 调用Service更新资源
+            resourceService.updateResource(id, resource);
+            return ResponseResult.success(null, "更新成功");
+        } catch (Exception e) {
+            return ResponseResult.failed("更新失败: " + e.getMessage());
+        }
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('OPENAPI_RESOURCE_DELETE')")
     public ResponseResult<Void> delete(@PathVariable("id") Long id) {
-        return resourceService.removeById(id) ? ResponseResult.success(null, "删除成功") : ResponseResult.failed("删除失败");
+        try {
+            // 调用Service删除资源
+            resourceService.deleteResource(id);
+            return ResponseResult.success(null, "删除成功");
+        } catch (Exception e) {
+            return ResponseResult.failed("删除失败: " + e.getMessage());
+        }
     }
 }

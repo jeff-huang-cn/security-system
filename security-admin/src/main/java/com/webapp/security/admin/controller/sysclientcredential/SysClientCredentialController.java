@@ -12,14 +12,10 @@ import com.webapp.security.core.model.PagedResult;
 import com.webapp.security.core.model.ResponseResult;
 import com.webapp.security.core.service.SysClientCredentialService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import cn.hutool.core.util.StrUtil;
 
@@ -31,57 +27,101 @@ public class SysClientCredentialController {
     private final SysClientCredentialService credentialService;
     private final CredentialConverter credentialConverter;
 
+    /**
+     * 分页查询客户端凭证
+     */
     @PostMapping("/paged")
     @PreAuthorize("hasAuthority('OPENAPI_CREDENTIAL_QUERY')")
     public ResponseResult<PagedResult<CredentialVO>> paged(@RequestBody PagedDTO paged) {
+        // 使用Controller层处理分页逻辑，便于扩展
         Page<SysClientCredential> page = new Page<>(paged.getPageNum(), paged.getPageSize());
         String keyword = paged.getKeyword();
         LambdaQueryWrapper<SysClientCredential> qw = new LambdaQueryWrapper<SysClientCredential>()
                 .like(StrUtil.isNotBlank(keyword), SysClientCredential::getAppId, keyword)
-                .or().like(SysClientCredential::getRemark, keyword);
+                .or().like(StrUtil.isNotBlank(keyword), SysClientCredential::getRemark, keyword);
+
+        // 调用基础Service方法执行查询
         Page<SysClientCredential> result = credentialService.page(page, qw);
-        return ResponseResult
-                .success(new PagedResult<>(credentialConverter.toVOList(result.getRecords()), result.getTotal()));
+
+        // 转换为VO并返回
+        return ResponseResult.success(
+                new PagedResult<>(credentialConverter.toVOList(result.getRecords()), result.getTotal()));
     }
 
+    /**
+     * 获取所有客户端凭证
+     */
     @GetMapping("/all")
     @PreAuthorize("hasAuthority('OPENAPI_CREDENTIAL_QUERY')")
     public ResponseResult<List<CredentialVO>> all() {
-        return ResponseResult.success(credentialConverter.toVOList(credentialService.list()));
+        // 调用Service获取所有凭证
+        List<SysClientCredential> credentials = credentialService.list();
+        // 转换为VO并返回
+        return ResponseResult.success(credentialConverter.toVOList(credentials));
     }
 
+    /**
+     * 生成临时的凭证信息，不保存到数据库
+     */
+    @GetMapping("/generate")
+    @PreAuthorize("hasAuthority('OPENAPI_CREDENTIAL_CREATE')")
+    public ResponseResult<CredentialCreateResultDTO> generateCredential() {
+        // 调用Service生成临时凭证
+        SysClientCredential credential = credentialService.generateCredential();
+        // 转换为DTO并返回
+        return ResponseResult.success(
+                new CredentialCreateResultDTO(credential.getAppId(), credential.getPlainSecret()));
+    }
+
+    /**
+     * 保存预先生成的凭证信息
+     */
+    @PostMapping("/save")
+    @PreAuthorize("hasAuthority('OPENAPI_CREDENTIAL_CREATE')")
+    public ResponseResult<CredentialCreateResultDTO> saveCredential(@Validated @RequestBody CredentialCreateDTO req) {
+        try {
+            // 调用Service保存凭证
+            SysClientCredential credential = credentialService.saveCredential(
+                    req.getAppId(), req.getAppSecret(), req.getRemark());
+            // 转换为DTO并返回
+            return ResponseResult.success(
+                    new CredentialCreateResultDTO(credential.getAppId(), credential.getPlainSecret()));
+        } catch (Exception e) {
+            return ResponseResult.failed(e.getMessage());
+        }
+    }
+
+    /**
+     * 创建客户端凭证（旧方法，保留兼容）
+     */
     @PostMapping
     @PreAuthorize("hasAuthority('OPENAPI_CREDENTIAL_CREATE')")
     public ResponseResult<CredentialCreateResultDTO> create(@Validated @RequestBody CredentialCreateDTO req) {
-        SysClientCredential entity = credentialService.createCredential(req.getRemark());
-        if (entity == null || entity.getId() == null) {
-            return ResponseResult.failed("创建失败");
+        try {
+            // 调用Service创建凭证
+            SysClientCredential entity = credentialService.createCredential(req.getRemark());
+            // 转换为DTO并返回
+            return ResponseResult.success(
+                    new CredentialCreateResultDTO(entity.getAppId(), entity.getPlainSecret()));
+        } catch (Exception e) {
+            return ResponseResult.failed(e.getMessage());
         }
-        // 明文密钥不在此返回（仅创建时展示，当前按你的要求仅返回实体信息）
-        return ResponseResult.success(new CredentialCreateResultDTO(entity.getAppId(), null));
     }
 
-    @GetMapping("/download/{appId}")
-    @PreAuthorize("hasAuthority('OPENAPI_CREDENTIAL_QUERY')")
-    public ResponseEntity<byte[]> download(@PathVariable String appId) {
-        SysClientCredential cred = credentialService.findByAppId(appId);
-        if (cred == null) {
-            return ResponseEntity.notFound().build();
-        }
-        String content = "appid=" + cred.getAppId() + "\n" +
-                "appsecret=<仅在创建时返回的明文，请妥善保管>\n";
-        byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=credential-" + cred.getAppId() + ".txt")
-                .contentType(MediaType.TEXT_PLAIN)
-                .body(bytes);
-    }
-
+    /**
+     * 更新凭证状态
+     */
     @PatchMapping("/{appId}/status")
     @PreAuthorize("hasAuthority('OPENAPI_CREDENTIAL_UPDATE')")
-    public ResponseResult<Void> updateStatus(@PathVariable String appId, @RequestParam Integer status,
-            @RequestParam String operator) {
-        boolean ok = credentialService.updateStatus(appId, status, operator);
-        return ok ? ResponseResult.success(null) : ResponseResult.failed("更新失败或不存在");
+    public ResponseResult<Void> updateStatus(@PathVariable String appId, @RequestParam Integer status) {
+        try {
+            // 调用Service更新状态
+            credentialService.updateStatus(appId, status);
+            return ResponseResult.success(null, "更新成功");
+        } catch (RuntimeException e) {
+            return ResponseResult.failed(e.getMessage());
+        } catch (Exception e) {
+            return ResponseResult.failed("更新失败: " + e.getMessage());
+        }
     }
 }

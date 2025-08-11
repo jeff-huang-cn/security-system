@@ -8,5 +8,5 @@ public class CredentialVO {
     private String appId;
     private String clientId;
     private Integer status;
-    private String creatorUsername;
+    private String createBy;
 }

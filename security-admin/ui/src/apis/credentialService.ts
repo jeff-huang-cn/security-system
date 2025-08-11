@@ -1,10 +1,34 @@
 import apiClient from './api';
-import { PagedDTO, PagedResult, CredentialVO, CredentialCreateResultDTO } from './types';
+import { PagedDTO, PagedResult, CredentialVO, CredentialCreateResultDTO, CredentialSaveDTO } from './types';
 
 /**
  * 客户端凭证管理API服务
+ * 
+ * 需要后端提供的新API:
+ * 
+ * 1. /api/sys-client-credentials/generate - GET
+ *    功能：生成临时的AppID和AppSecret，但不保存到数据库
+ *    返回：{ appId: string, appSecret: string }
+ * 
+ * 2. /api/sys-client-credentials/save - POST
+ *    功能：保存已生成的凭证信息
+ *    参数：{ appId: string, appSecret: string, remark: string }
+ *    返回：保存后的凭证信息
  */
 export const credentialService = {
+  /**
+   * 生成临时凭证信息（不保存）
+   */
+  generateCredential: async (): Promise<CredentialCreateResultDTO> => {
+    return apiClient.get('/api/sys-client-credentials/generate');
+  },
+  
+  /**
+   * 保存已生成的凭证信息
+   */
+  saveCredential: async (data: CredentialSaveDTO): Promise<any> => {
+    return apiClient.post('/api/sys-client-credentials/save', data);
+  },
   /**
    * 分页查询客户端凭证
    */
@@ -28,15 +52,7 @@ export const credentialService = {
     });
   },
 
-  /**
-   * 下载凭证文件
-   * 注意：此方法返回的是文件流，需要在前端处理下载
-   */
-  download: async (appId: string): Promise<Blob> => {
-    return apiClient.get(`/api/sys-client-credentials/download/${appId}`, {
-      responseType: 'blob'
-    });
-  },
+
 
   /**
    * 更新客户端凭证状态

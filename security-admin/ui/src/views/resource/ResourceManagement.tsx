@@ -47,8 +47,43 @@ const ResourceManagement: React.FC = () => {
         keyword: search
       };
       const response = await resourceService.paged(pagedDTO);
-      setResources(response.records);
-      setTotal(response.total);
+      if (response && typeof response === 'object') {
+        if ('records' in response && Array.isArray(response.records)) {
+          setResources(response.records);
+          setTotal(response.total || 0);
+        } else if ('list' in response && Array.isArray(response.list)) {
+          setResources(response.list);
+          setTotal(response.total || 0);
+        } else if (Array.isArray(response)) {
+          setResources(response);
+          setTotal(response.length);
+        } else if ('data' in response && typeof response.data === 'object') {
+          // 处理嵌套在data字段中的情况
+          const data = response.data as any;
+          if ('records' in data && Array.isArray(data.records)) {
+            setResources(data.records);
+            setTotal(data.total || 0);
+          } else if ('list' in data && Array.isArray(data.list)) {
+            setResources(data.list);
+            setTotal(data.total || 0);
+          } else if (Array.isArray(response.data)) {
+            setResources(response.data);
+            setTotal(response.data.length || 0);
+          } else {
+            console.error('无法识别的响应数据格式:', response);
+            setResources([]);
+            setTotal(0);
+          }
+        } else {
+          console.error('无法识别的响应数据格式:', response);
+          setResources([]);
+          setTotal(0);
+        }
+      } else {
+        console.error('响应数据无效:', response);
+        setResources([]);
+        setTotal(0);
+      }
     } catch (error) {
       console.error('加载API资源失败:', error);
       message.error('加载数据失败，请重试');
@@ -262,6 +297,8 @@ const ResourceManagement: React.FC = () => {
         open={isModalVisible}
         onOk={handleSubmit}
         onCancel={() => setIsModalVisible(false)}
+        okText="确认"
+        cancelText="取消"
         confirmLoading={loading}
         width={700}
       >

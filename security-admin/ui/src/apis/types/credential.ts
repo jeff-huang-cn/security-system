@@ -26,8 +26,17 @@ export interface CredentialCreateDTO {
  * 创建凭证结果DTO
  */
 export interface CredentialCreateResultDTO {
+  appId?: string;
+  appSecret?: string;
+}
+
+/**
+ * 保存凭证请求DTO
+ */
+export interface CredentialSaveDTO {
   appId: string;
   appSecret: string;
+  remark: string;
 }
 
 /**

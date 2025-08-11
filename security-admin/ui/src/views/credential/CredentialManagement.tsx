@@ -74,11 +74,39 @@ const CredentialManagement: React.FC = () => {
         keyword: search
       };
       const response = await credentialService.paged(pagedDTO);
-      setCredentials(response.records);
-      setTotal(response.total);
+      console.log('API返回数据:', response);
+      
+      // 处理返回结果，适应不同的响应格式
+      if (response && typeof response === 'object') {
+        // 如果返回的是分页对象，可能有records字段
+        if ('records' in response && Array.isArray(response.records)) {
+          setCredentials(response.records);
+          setTotal(response.total || 0);
+        }
+        // 如果返回的是分页对象，可能有list字段 (参考UserManagement)
+        else if ('list' in response && Array.isArray(response.list)) {
+          setCredentials(response.list);
+          setTotal(response.total || 0);
+        }
+        // 如果返回的是数组
+        else if (Array.isArray(response)) {
+          setCredentials(response);
+          setTotal(response.length);
+        } else {
+          console.warn('API返回的数据格式不符合预期:', response);
+          setCredentials([]);
+          setTotal(0);
+        }
+      } else {
+        console.warn('API响应无效:', response);
+        setCredentials([]);
+        setTotal(0);
+      }
     } catch (error) {
       console.error('加载客户端凭证失败:', error);
       message.error('加载数据失败，请重试');
+      setCredentials([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
@@ -101,13 +129,69 @@ const CredentialManagement: React.FC = () => {
     loadCredentials(1, pageSize, keyword);
   };
 
+  // 预生成凭证信息
+  const [tempCredential, setTempCredential] = useState<{appId?: string, appSecret?: string} | null>(null);
+  
+  // 生成临时凭证信息
+  const generateTempCredential = async () => {
+    try {
+      setLoading(true);
+      // 新增API: 调用后端API生成临时凭证
+      const response = await credentialService.generateCredential();
+      console.log('预生成凭证响应:', response);
+      
+      if (!response || !response.appId || !response.appSecret) {
+        throw new Error('生成凭证信息失败');
+      }
+      
+      setTempCredential(response);
+    } catch (error) {
+      console.error('生成临时凭证失败:', error);
+      message.error('生成凭证信息失败，请重试');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // 打开创建凭证对话框
+  const showCreateModal = async () => {
+    form.resetFields();
+    setTempCredential(null);
+    await generateTempCredential();
+    setIsModalVisible(true);
+  };
+  
   // 处理创建凭证
   const handleCreate = async () => {
     try {
+      if (!tempCredential) {
+        throw new Error('凭证信息未生成，请刷新重试');
+      }
+      
       const values = await form.validateFields();
       setLoading(true);
-      const response = await credentialService.create(values.remark);
-      setCreateResult(response);
+      
+      // 允许备注为空，使用空字符串作为默认值
+      const remark = values.remark || '';
+      
+      // 使用预生成的凭证信息和备注保存
+      if (!tempCredential.appId || !tempCredential.appSecret) {
+        throw new Error('凭证信息不完整');
+      }
+      
+      const response = await credentialService.saveCredential({
+        appId: tempCredential.appId,
+        appSecret: tempCredential.appSecret,
+        remark: remark
+      });
+      
+      console.log('保存凭证响应:', response);
+      
+      // 保存结果并显示
+      setCreateResult({
+        appId: tempCredential.appId || '',
+        appSecret: tempCredential.appSecret || ''
+      });
       setIsModalVisible(false);
       setCreateResultVisible(true);
       form.resetFields();
@@ -115,23 +199,26 @@ const CredentialManagement: React.FC = () => {
       message.success('创建成功');
     } catch (error) {
       console.error('创建凭证失败:', error);
-      message.error('创建失败，请重试');
+      message.error(error instanceof Error ? error.message : '创建失败，请重试');
     } finally {
       setLoading(false);
     }
   };
 
-  // 处理下载凭证
-  const handleDownload = async (appId: string) => {
+  // 处理前端下载凭证
+  const handleDownload = (appId: string, plainSecret: string | null = null) => {
     try {
-      const response = await credentialService.download(appId);
-      const url = window.URL.createObjectURL(new Blob([response]));
+      const secretToUse = plainSecret || "<请在创建完成后立即下载获取明文密钥，后续无法再次获取>";
+      const content = `appid=${appId}\nappsecret=${secretToUse}\n`;
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', `credential-${appId}.txt`);
       document.body.appendChild(link);
       link.click();
       link.remove();
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('下载凭证失败:', error);
       message.error('下载失败，请重试');
@@ -265,8 +352,8 @@ const CredentialManagement: React.FC = () => {
     },
     {
       title: '创建者',
-      dataIndex: 'creatorUsername',
-      key: 'creatorUsername',
+      dataIndex: 'createBy',
+      key: 'createBy',
     },
     {
       title: '备注',
@@ -287,13 +374,6 @@ const CredentialManagement: React.FC = () => {
           >
             分配API权限
           </Button>
-          <Button
-            icon={<DownloadOutlined />}
-            onClick={() => handleDownload(record.appId)}
-            size="small"
-          >
-            下载
-          </Button>
         </Space>
       ),
     },
@@ -305,7 +385,7 @@ const CredentialManagement: React.FC = () => {
         <Button 
           type="primary" 
           icon={<PlusOutlined />} 
-          onClick={() => setIsModalVisible(true)}
+          onClick={showCreateModal}
         >
           新增凭证
         </Button>
@@ -347,17 +427,77 @@ const CredentialManagement: React.FC = () => {
         open={isModalVisible}
         onOk={handleCreate}
         onCancel={() => setIsModalVisible(false)}
+        okText="确认保存"
+        cancelText="取消"
         confirmLoading={loading}
+        width={700}
       >
-        <Form form={form} layout="vertical">
-          <Form.Item
-            name="remark"
-            label="备注"
-            rules={[{ required: true, message: '请输入备注' }]}
-          >
-            <Input placeholder="请输入备注信息，如：用途、负责人等" />
-          </Form.Item>
-        </Form>
+        {loading && !tempCredential ? (
+          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+            <Spin tip="正在生成凭证信息..." />
+          </div>
+        ) : (
+          <Form form={form} layout="vertical">
+            {tempCredential && (
+              <>
+                <Alert
+                  message="重要提示"
+                  description="请记录AppID和AppSecret，点击确认后将保存凭证信息。"
+                  type="warning"
+                  showIcon
+                  style={{ marginBottom: 16 }}
+                />
+                
+                <Form.Item label="AppID">
+                  <div style={{ 
+                    background: '#f5f5f5', 
+                    padding: '12px 16px', 
+                    borderRadius: '4px',
+                    position: 'relative'
+                  }}>
+                    <Text style={{ fontSize: 16, wordBreak: 'break-all', display: 'block' }}>
+                      {tempCredential.appId}
+                    </Text>
+                                         <Button 
+                      icon={<CopyOutlined />} 
+                      type="text"
+                      onClick={() => tempCredential.appId && copyToClipboard(tempCredential.appId)}
+                      style={{ position: 'absolute', right: 8, top: 8 }}
+                    />
+                  </div>
+                </Form.Item>
+                
+                <Form.Item label="AppSecret">
+                  <div style={{ 
+                    background: '#fffbe6', 
+                    padding: '12px 16px', 
+                    borderRadius: '4px',
+                    border: '1px solid #ffe58f',
+                    position: 'relative'
+                  }}>
+                    <Text style={{ fontSize: 16, wordBreak: 'break-all', display: 'block', fontWeight: 'bold' }}>
+                      {tempCredential.appSecret}
+                    </Text>
+                                         <Button 
+                      icon={<CopyOutlined />} 
+                      type="text"
+                      onClick={() => tempCredential.appSecret && copyToClipboard(tempCredential.appSecret)}
+                      style={{ position: 'absolute', right: 8, top: 8 }}
+                    />
+                  </div>
+                </Form.Item>
+              </>
+            )}
+            
+            <Form.Item
+              name="remark"
+              label="备注"
+              rules={[{ required: false }]}
+            >
+              <Input placeholder="请输入备注信息，如：用途、负责人等（选填）" />
+            </Form.Item>
+          </Form>
+        )}
       </Modal>
 
       {/* 创建结果展示 */}
@@ -371,12 +511,26 @@ const CredentialManagement: React.FC = () => {
             type="primary" 
             icon={<DownloadOutlined />}
             onClick={() => {
-              if (createResult) {
-                handleDownload(createResult.appId);
+              if (createResult && createResult.appId) {
+                handleDownload(createResult.appId, createResult.appSecret || null);
               }
             }}
           >
             下载凭证
+          </Button>,
+          <Button 
+            key="copy"
+            type="primary"
+            icon={<CopyOutlined />}
+            onClick={() => {
+              if (createResult && createResult.appId && createResult.appSecret) {
+                const textToCopy = 
+                `AppID: ${createResult.appId}\nAppSecret: ${createResult.appSecret}`;
+                copyToClipboard(textToCopy);
+              }
+            }}
+          >
+            复制全部
           </Button>,
           <Button 
             key="close" 
@@ -385,11 +539,11 @@ const CredentialManagement: React.FC = () => {
             关闭
           </Button>
         ]}
-        width={600}
+        width={700}
       >
         <Alert
           message="重要提示"
-          description="AppSecret 仅显示一次，请立即保存！关闭此窗口后将无法再次查看完整的密钥。"
+          description="AppSecret 仅显示一次，请立即复制或下载！关闭此窗口后将无法再次查看完整的密钥。"
           type="warning"
           showIcon
           style={{ marginBottom: 16 }}
@@ -399,16 +553,51 @@ const CredentialManagement: React.FC = () => {
           <Card>
             <Row gutter={[16, 16]}>
               <Col span={24}>
-                <Text strong>AppID:</Text>
-                <Paragraph copyable={{ text: createResult.appId }}>
-                  <Text code>{createResult.appId}</Text>
-                </Paragraph>
+                <Text strong style={{ fontSize: 16 }}>AppID:</Text>
+                <div 
+                  style={{ 
+                    background: '#f5f5f5', 
+                    padding: '12px 16px', 
+                    borderRadius: '4px',
+                    marginTop: 8,
+                    marginBottom: 4,
+                    position: 'relative'
+                  }}
+                >
+                  <Text style={{ fontSize: 16, wordBreak: 'break-all', display: 'block' }}>
+                    {createResult.appId}
+                  </Text>
+                  <Button 
+                    icon={<CopyOutlined />} 
+                    type="text"
+                                          onClick={() => createResult.appId && copyToClipboard(createResult.appId)}
+                    style={{ position: 'absolute', right: 8, top: 8 }}
+                  />
+                </div>
               </Col>
               <Col span={24}>
-                <Text strong>AppSecret:</Text>
-                <Paragraph copyable={{ text: createResult.appSecret }}>
-                  <Text code>{createResult.appSecret}</Text>
-                </Paragraph>
+                <Text strong style={{ fontSize: 16 }}>AppSecret:</Text>
+                <div 
+                  style={{ 
+                    background: '#fffbe6', 
+                    padding: '12px 16px', 
+                    borderRadius: '4px',
+                    border: '1px solid #ffe58f',
+                    marginTop: 8,
+                    marginBottom: 4,
+                    position: 'relative'
+                  }}
+                >
+                  <Text style={{ fontSize: 16, wordBreak: 'break-all', display: 'block', fontWeight: 'bold' }}>
+                    {createResult.appSecret}
+                  </Text>
+                  <Button 
+                    icon={<CopyOutlined />} 
+                    type="text"
+                                          onClick={() => createResult.appSecret && copyToClipboard(createResult.appSecret)}
+                    style={{ position: 'absolute', right: 8, top: 8 }}
+                  />
+                </div>
               </Col>
             </Row>
           </Card>
@@ -421,8 +610,11 @@ const CredentialManagement: React.FC = () => {
         open={assignModalVisible}
         onOk={handleSaveAssignment}
         onCancel={() => setAssignModalVisible(false)}
+        okText="确认"
+        cancelText="取消"
         width={800}
         confirmLoading={transferLoading}
+        maskClosable={false}
       >
         <Spin spinning={transferLoading}>
           <Alert

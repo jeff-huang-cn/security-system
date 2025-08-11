@@ -36,6 +36,13 @@ public class SysClientCredential {
     private String appSecret;
 
     /**
+     * 明文密钥（不持久化）
+     * 仅用于创建凭证时返回给客户端，不会存储到数据库
+     */
+    @TableField(exist = false)
+    private String plainSecret;
+
+    /**
      * 关联OAuth2注册客户端的ID
      * 固定为"openapi"
      */
