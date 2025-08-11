@@ -11,6 +11,9 @@ import { TokenManager } from './tokenManager';
  * 4. 处理登录、登出、token刷新等核心认证流程
  */
 
+// 使用Promise单例模式，确保同一时间只有一个刷新token的请求
+let refreshTokenPromise: Promise<any> | null = null;
+
 export const authService = {
   /**
    * 用户登录
@@ -55,57 +58,78 @@ export const authService = {
   },
 
   /**
-   * 刷新访问令牌
+   * 刷新访问令牌 - 单例模式实现
    * 
    * @param refreshToken 可选的刷新令牌，如果不提供则从localStorage获取
-   * @returns Promise<void> 无返回值，成功时token已保存，失败时抛出异常
+   * @returns Promise<any> 刷新token的Promise
    * 
    * 执行流程：
-   * 1. 获取refresh_token（参数传入或从localStorage读取）
-   * 2. 直接调用SSO服务的刷新接口
-   * 3. 通过TokenManager保存新的token信息
-   * 4. 成功时无返回值，失败时抛出异常
+   * 1. 检查是否已有刷新请求在进行中，如有则复用现有Promise
+   * 2. 获取refresh_token（参数传入或从localStorage读取）
+   * 3. 调用SSO服务的刷新接口
+   * 4. 通过TokenManager保存新的token信息
+   * 5. 无论成功失败，一段时间后清除Promise引用以允许再次刷新
    * 
-   * 注意：此函数主要供api.ts中的自动刷新机制调用，调用者通过TokenManager获取token
+   * 单例模式好处：
+   * 1. 避免多个请求同时触发多次token刷新
+   * 2. 所有需要刷新的请求共享同一个刷新结果
+   * 3. 减少对认证服务器的请求压力
+   * 4. 提高应用性能和用户体验
    */
   refreshToken: async (refreshToken?: string) => {
-    try {
-      const token = refreshToken || TokenManager.getRefreshToken();
-      if (!token) {
-        throw new Error('No refresh token available');
-      }
-
-
-      const response = await authApi.post('/oauth2/refresh', {
-        refreshToken: token
-      });
-
-
-
-      // 更新本地存储的token
-      const { access_token, refresh_token: newRefreshToken } = response.data;
-      
-      if (!access_token) {
-        throw new Error('Refresh response missing access_token');
-      }
-      
-      // 解析过期时间，确保它是一个数字
-      let expires_in = response.data.expires_in;
-      if (typeof expires_in === 'string') {
-        expires_in = parseInt(expires_in, 10);
-      }
-      
-
-      
-      // 使用TokenManager保存token信息
-      TokenManager.saveTokens(access_token, newRefreshToken, expires_in);
-      console.info('Token refresh success, new access token saved');
-    } catch (error) {
-      console.error('Token refresh failed:', error);
-      // 刷新失败，清除token避免继续使用无效token
-      TokenManager.clearTokens();
-      throw error; // 重新抛出错误，让调用者处理
+    // 如果已有刷新请求正在进行中，直接返回该Promise
+    if (refreshTokenPromise) {
+      console.log('Token refresh already in progress, reusing existing promise');
+      return refreshTokenPromise;
     }
+
+    console.log('Starting new token refresh');
+    
+    // 创建新的刷新Promise并保存到单例变量
+    refreshTokenPromise = (async () => {
+      try {
+        const token = refreshToken || TokenManager.getRefreshToken();
+        if (!token) {
+          throw new Error('No refresh token available');
+        }
+
+        const response = await authApi.post('/oauth2/refresh', {
+          refreshToken: token
+        });
+
+        // 更新本地存储的token
+        const { access_token, refresh_token: newRefreshToken } = response.data;
+        
+        if (!access_token) {
+          throw new Error('Refresh response missing access_token');
+        }
+        
+        // 解析过期时间，确保它是一个数字
+        let expires_in = response.data.expires_in;
+        if (typeof expires_in === 'string') {
+          expires_in = parseInt(expires_in, 10);
+        }
+        
+        // 使用TokenManager保存token信息
+        TokenManager.saveTokens(access_token, newRefreshToken, expires_in);
+        console.info('Token refresh success, new access token saved');
+        
+        return response.data;
+      } catch (error) {
+        console.error('Token refresh failed:', error);
+        // 刷新失败，清除token避免继续使用无效token
+        TokenManager.clearTokens();
+        throw error; // 重新抛出错误，让调用者处理
+      } finally {
+        // 5秒后清除Promise引用，允许新的刷新请求
+        setTimeout(() => {
+          refreshTokenPromise = null;
+          console.log('Token refresh promise cleared, allowing new refresh');
+        }, 5000);
+      }
+    })();
+
+    return refreshTokenPromise;
   },
 
 

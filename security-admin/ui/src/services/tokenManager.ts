@@ -8,6 +8,10 @@ export class TokenManager {
   private static readonly ACCESS_TOKEN_KEY = 'access_token';
   private static readonly REFRESH_TOKEN_KEY = 'refresh_token';
   private static readonly TOKEN_EXPIRY_KEY = 'token_expiry';
+  private static readonly USER_KEY = 'user';
+  private static readonly REFRESH_THRESHOLD_MINUTES = 2; // 默认刷新阈值为2分钟
+  
+  // TokenManager不再负责刷新token逻辑
 
   /**
    * 保存token信息
@@ -32,8 +36,7 @@ export class TokenManager {
       
       const expiryTime = Date.now() + (adjustedExpiresIn * 1000);
       localStorage.setItem(this.TOKEN_EXPIRY_KEY, expiryTime.toString());
-      
-
+      console.log(`Token will expire at: ${new Date(expiryTime).toLocaleString()}`);
     } else {
       // 如果没有提供有效的过期时间，使用默认值（30分钟 - 缓冲时间）
       const defaultExpiry = Date.now() + ((30 * 60 - 100) * 1000); // 30分钟减去100秒缓冲
@@ -53,10 +56,22 @@ export class TokenManager {
   }
 
   /**
-   * 获取访问令牌
+   * 获取访问令牌 (不检查是否过期)
    */
   static getAccessToken(): string | null {
     return localStorage.getItem(this.ACCESS_TOKEN_KEY);
+  }
+
+  /**
+   * 获取有效的访问令牌
+   * 如果token已过期，则返回null
+   * @returns 有效的token或null
+   */
+  static getValidAccessToken(): string | null {
+    if (this.isTokenExpired()) {
+      return null;
+    }
+    return this.getAccessToken();
   }
 
   /**
@@ -67,9 +82,10 @@ export class TokenManager {
   }
 
   /**
-   * 检查token是否即将过期（提前5分钟）
+   * 检查token是否即将过期（提前指定分钟数）
+   * @param bufferMinutes 提前多少分钟判定为即将过期
    */
-  static isTokenExpiringSoon(): boolean {
+  static isTokenExpiringSoon(bufferMinutes = this.REFRESH_THRESHOLD_MINUTES): boolean {
     const expiryTime = localStorage.getItem(this.TOKEN_EXPIRY_KEY);
     if (!expiryTime) {
       return false;
@@ -81,13 +97,17 @@ export class TokenManager {
     }
     
     const now = Date.now();
-    const minutes = 5 * 60 * 1000; // 5分钟
+    const minutes = bufferMinutes * 60 * 1000; // 转换为毫秒
     const timeRemaining = expiry - now;
     
-    // 如果token已经过期或即将过期（剩余时间小于5分钟），则需要刷新
-    // 注意：如果token已过期，timeRemaining会是负数，但我们仍然需要刷新
+    // 如果token已经过期或即将过期（剩余时间小于指定分钟），则需要刷新
     const isExpiring = timeRemaining <= minutes;
-    console.log(`Token expiry check: timeRemaining=${timeRemaining}ms, fiveMinutes=${minutes}ms, isExpiring=${isExpiring}`);
+    
+    // 只在接近过期时记录日志，避免日志过多
+    if (isExpiring) {
+      console.log(`Token expiry check: timeRemaining=${timeRemaining}ms, bufferMinutes=${minutes}ms, isExpiring=${isExpiring}`);
+    }
+    
     return isExpiring;
   }
 
@@ -108,7 +128,10 @@ export class TokenManager {
     const now = Date.now();
     const isExpired = now >= expiry;
     
-    console.log(`Token expired check: now=${now}, expiry=${expiry}, isExpired=${isExpired}`);
+    // 只在已过期时记录日志，避免日志过多
+    if (isExpired) {
+      console.log(`Token expired check: now=${now}, expiry=${expiry}, isExpired=${isExpired}`);
+    }
     
     return isExpired;
   }
@@ -134,7 +157,7 @@ export class TokenManager {
     localStorage.removeItem(this.ACCESS_TOKEN_KEY);
     localStorage.removeItem(this.REFRESH_TOKEN_KEY);
     localStorage.removeItem(this.TOKEN_EXPIRY_KEY);
-
+    localStorage.removeItem(this.USER_KEY);
   }
 
   /**
@@ -143,20 +166,42 @@ export class TokenManager {
   static getTokenRemainingTime(): number {
     const expiryTime = localStorage.getItem(this.TOKEN_EXPIRY_KEY);
     if (!expiryTime) {
-
       return 0;
     }
     
     const expiry = parseInt(expiryTime, 10);
     if (isNaN(expiry)) {
-
       return 0;
     }
     
     const now = Date.now();
     const remainingTime = Math.max(0, expiry - now);
     
-    
     return remainingTime;
+  }
+  
+  /**
+   * 保存用户信息
+   * @param userData 用户数据
+   */
+  static saveUserInfo(userData: any): void {
+    localStorage.setItem(this.USER_KEY, JSON.stringify(userData));
+  }
+  
+  /**
+   * 获取用户信息
+   */
+  static getUserInfo(): any | null {
+    const userStr = localStorage.getItem(this.USER_KEY);
+    if (!userStr) {
+      return null;
+    }
+    
+    try {
+      return JSON.parse(userStr);
+    } catch (error) {
+      console.error('解析用户数据失败', error);
+      return null;
+    }
   }
 }

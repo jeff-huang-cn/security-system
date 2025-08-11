@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import Login from './views/login/Login';
 import Dashboard from './views/dashboard/Dashboard';
+import { TokenManager } from './services/tokenManager';
 import './App.css';
 
 const App: React.FC = () => {
@@ -9,32 +10,24 @@ const App: React.FC = () => {
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    // 检查本地存储中是否有token
-    const token = localStorage.getItem('token');
-    const userStr = localStorage.getItem('user');
+    // 检查是否有有效的token
+    const isAuth = TokenManager.isAuthenticated();
+    const userData = TokenManager.getUserInfo();
     
-    if (token && userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        setIsAuthenticated(true);
-        setUser(user);
-      } catch (error) {
-        console.error('Invalid user data in localStorage');
-        handleLogout();
-      }
-    }
+    setIsAuthenticated(isAuth);
+    setUser(userData);
   }, []);
 
   const handleLogin = (userData: any, token: string) => {
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(userData));
+    // 保存用户信息
+    TokenManager.saveUserInfo(userData);
     setIsAuthenticated(true);
     setUser(userData);
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    // 清除所有令牌和用户信息
+    TokenManager.clearTokens();
     setIsAuthenticated(false);
     setUser(null);
   };

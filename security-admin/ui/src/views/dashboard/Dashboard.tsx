@@ -36,6 +36,7 @@ import PermissionAssignment from '../../views/permission/PermissionAssignment';
 import ProtectedRoute from '../../components/common/ProtectedRoute';
 import { authService } from '../../services/authService';
 import { MenuService, MenuItem, DashboardStats } from '../../apis/menuService';
+import { TokenManager } from '../../services/tokenManager';
 
 const { Header, Sider, Content } = Layout;
 
@@ -60,16 +61,20 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 从localStorage获取用户信息
-    const token = localStorage.getItem('token');
-    const user = localStorage.getItem('user');
+    // 设置用户信息
     if (user) {
-      setUserInfo(JSON.parse(user));
+      setUserInfo(user);
+    } else {
+      // 如果没有通过props传递，则尝试从TokenManager获取
+      const userData = TokenManager.getUserInfo();
+      if (userData) {
+        setUserInfo(userData);
+      }
     }
 
     // 加载菜单和统计数据
     loadDashboardData();
-  }, []);
+  }, [user]);
 
   const loadDashboardData = async () => {
     try {
@@ -117,9 +122,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       onLogout();
     } catch (error) {
       console.error('Logout failed:', error);
-      // 即使登出失败，也清除本地存储并跳转到登录页
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
+      // 即使登出失败，也清除本地存储并调用onLogout
+      TokenManager.clearTokens();
       onLogout();
     }
   };

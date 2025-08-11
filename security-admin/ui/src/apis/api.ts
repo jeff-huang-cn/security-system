@@ -44,74 +44,64 @@ export const businessApi: AxiosInstance = axios.create({
   },
 });
 
-// 使用Promise单例模式，确保同一时间只有一个刷新token的请求
-let refreshTokenPromise: Promise<any> | null = null;
-
 // ===== 请求拦截器配置 =====
 /**
  * 请求拦截器：自动添加Authorization头
- * 并在token即将过期时刷新（只由一个请求触发，其他请求不受影响）
+ * 检查token是否有效，无效则尝试刷新
  */
 const requestInterceptor = async (config: any) => {
   // 如果是认证API的请求，直接返回配置
   if (config._isAuthApi) {
     return config;
   }
-  
-  // 每次请求都重新获取最新token，确保使用的是最新刷新的token
-  const latestToken = TokenManager.getAccessToken();
-  if (latestToken) {
-    config.headers.Authorization = `Bearer ${latestToken}`;
-  }
 
-  // 如果token即将过期，尝试刷新
-  const refreshTokenIfNeeded = async () => {
-    // 如果已经有一个刷新请求在进行中，直接返回该Promise
-    if (refreshTokenPromise) {
-      console.log('Token refresh already in progress, reusing existing promise');
-      return refreshTokenPromise;
+  // 获取有效token (如果已过期则为null)
+  let validToken = TokenManager.getValidAccessToken();
+  
+  // 如果没有有效token，尝试刷新
+  if (!validToken) {
+    try {
+      console.log('No valid token available, refreshing token before proceeding with request');
+      // 等待刷新token完成
+      await authService.refreshToken();
+      
+      // 获取刷新后的token
+      validToken = TokenManager.getValidAccessToken();
+      
+      // 如果刷新后仍然没有有效token，则可能是刷新失败
+      if (!validToken) {
+        throw new Error('Failed to obtain valid token after refresh');
+      }
+    } catch (error) {
+      // 如果刷新失败，重定向到登录页
+      console.error('Failed to refresh token in request interceptor:', error);
+      TokenManager.clearTokens();
+      window.location.replace('/login');
+      return Promise.reject(error);
     }
-
-    console.log('Starting new token refresh');
-    // 创建新的刷新Promise
-    refreshTokenPromise = authService.refreshToken()
-      .then(response => {
-        console.info('Token refresh success');
-        return response;
-      })
-      .catch(error => {
-        console.error('Token refresh failed:', error);
-        throw error;
-      })
-      .finally(() => {
-        // 5秒后清除Promise，允许新的刷新请求
-        setTimeout(() => {
-          refreshTokenPromise = null;
-          console.log('Token refresh promise cleared, allowing new refresh');
-        }, 5000);
-      });
-
-    return refreshTokenPromise;
-  };
-  
-  // 检查是否需要刷新token
-  if (TokenManager.isTokenExpiringSoon()) {
-    console.log('Token expiring soon, attempting refresh');
-    // 不阻塞当前请求，在后台刷新token
-    refreshTokenIfNeeded().catch(() => {
-      // 错误已在refreshTokenIfNeeded中处理
-    });
   }
   
-  // 无论是否触发刷新，都返回配置继续请求
+  // 添加token到请求头
+  config.headers.Authorization = `Bearer ${validToken}`;
+
+  // 返回配置继续请求
   return config;
 };
 
-// ===== 响应错误拦截器配置 =====
 /**
  * 响应拦截器：处理返回数据
  */
 const responseInterceptor = (response: any) => {  
+  // 检查token是否即将过期，在后台刷新
+  if (TokenManager.isTokenExpiringSoon()) {
+    console.log('Token expiring soon, refreshing in background after successful response');
+    // 不阻塞响应处理，在后台刷新token
+    authService.refreshToken().catch((error) => {
+      console.error('Background token refresh after response failed:', error);
+      // 错误已在refreshToken内部处理
+    });
+  }
+
   // 检查HTTP状态码
   if(response.status !== 200) {
     const error = new Error(response.data?.message || `HTTP错误: ${response.status}`);
@@ -175,19 +165,8 @@ const responseErrorInterceptor = async (error: any) => {
       originalRequest._retry = true;
       
       try {
-        // 使用Promise单例模式刷新token
-        if (!refreshTokenPromise) {
-          refreshTokenPromise = authService.refreshToken()
-            .finally(() => {
-              // 5秒后清除Promise，允许新的刷新请求
-              setTimeout(() => {
-                refreshTokenPromise = null;
-              }, 5000);
-            });
-        }
-        
         // 等待刷新完成
-        await refreshTokenPromise;
+        await authService.refreshToken();
         
         // 更新失败请求的Authorization头，总是使用最新的token
         const newToken = TokenManager.getAccessToken(); // 从TokenManager获取刷新后的token
