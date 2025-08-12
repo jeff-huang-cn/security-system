@@ -1,8 +1,8 @@
-package com.webapp.security.sso.custom.oauth2.util;
+package com.webapp.security.sso.oauth2.custom.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.webapp.security.core.entity.SysUser;
-import com.webapp.security.sso.custom.oauth2.service.CustomJwtUserDetailsService;
+import com.webapp.security.sso.oauth2.custom.service.CustomJwtUserDetailsService;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import org.slf4j.Logger;

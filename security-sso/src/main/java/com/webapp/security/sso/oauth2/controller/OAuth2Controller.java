@@ -12,6 +12,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.security.oauth2.core.OAuth2RefreshToken;
 import org.springframework.security.oauth2.core.OAuth2Token;
@@ -71,7 +72,7 @@ public class OAuth2Controller {
             OAuth2Authorization.Builder authorizationBuilder = OAuth2Authorization
                     .withRegisteredClient(registeredClient)
                     .principalName(authentication.getName())
-                    .authorizationGrantType(org.springframework.security.oauth2.core.AuthorizationGrantType.PASSWORD)
+                    .authorizationGrantType(AuthorizationGrantType.PASSWORD)
                     .authorizedScopes(registeredClient.getScopes());
 
             // 5. 生成Access Token

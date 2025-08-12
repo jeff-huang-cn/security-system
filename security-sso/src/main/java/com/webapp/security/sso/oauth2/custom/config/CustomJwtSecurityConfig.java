@@ -1,7 +1,7 @@
-package com.webapp.security.sso.custom.oauth2.config;
+package com.webapp.security.sso.oauth2.custom.config;
 
-import com.webapp.security.sso.custom.oauth2.filter.CustomJwtAuthenticationFilter;
-import com.webapp.security.sso.custom.oauth2.service.CustomJwtUserDetailsService;
+import com.webapp.security.sso.oauth2.custom.filter.CustomJwtAuthenticationFilter;
+import com.webapp.security.sso.oauth2.custom.service.CustomJwtUserDetailsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;

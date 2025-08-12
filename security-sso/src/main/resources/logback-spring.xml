@@ -153,13 +153,13 @@
     </root>
     
     <!-- 开发环境配置 -->
-    <springProfile name="dev">
-        <logger name="com.webapp.security" level="DEBUG"/>
-        <logger name="org.springframework.web" level="DEBUG"/>
-        <root level="DEBUG">
-            <appender-ref ref="CONSOLE"/>
-        </root>
-    </springProfile>
+<!--    <springProfile name="dev">-->
+<!--        <logger name="com.webapp.security" level="DEBUG"/>-->
+<!--        <logger name="org.springframework.web" level="DEBUG"/>-->
+<!--        <root level="DEBUG">-->
+<!--            <appender-ref ref="CONSOLE"/>-->
+<!--        </root>-->
+<!--    </springProfile>-->
     
     <!-- 生产环境配置 -->
     <springProfile name="prod">

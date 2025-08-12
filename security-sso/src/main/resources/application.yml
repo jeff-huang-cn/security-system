@@ -5,6 +5,8 @@ server:
     context-path: /
 
 spring:
+  profiles:
+    active: dev
   application:
     name: auth-service
 
@@ -36,7 +38,7 @@ spring:
 
   # Redis配置
   redis:
-    host: ${REDIS_HOST:localhost}
+    host: ${REDIS_HOST:127.0.0.1}
     port: ${REDIS_PORT:6379}
     #    password: ${REDIS_PASSWORD:}
     database: ${REDIS_DATABASE:0}
@@ -71,9 +73,21 @@ mybatis-plus:
 oauth2:
   server:
     # 授权服务器的基础URL，默认使用localhost
-    base-url: http://localhost:${server.port}
+    base-url: http://127.0.0.1:${server.port}
     # JWK Set URI
     jwk-set-uri: ${oauth2.server.base-url}/.well-known/jwks.json
+  # OpenAPI认证配置
+  openapi:
+    # 共享的OAuth2客户端ID
+    client-id: openapi
+    # 共享客户端的密钥（生产环境建议使用ENC(...)或环境变量覆盖）
+    client-secret: IPSG-YbDDJ4C_tscD-OuYfrfSmVW8UKV
+    # 令牌默认有效期（秒）
+    token-validity-seconds: 7200
+    # 是否启用防重放攻击保护
+    enable-replay-protection: false
+    # 时间戳有效期（秒）
+    timestamp-valid-seconds: 300
 
 # 自定义JWT配置
 custom:
@@ -83,7 +97,8 @@ custom:
     expiration: 3600 # 访问令牌过期时间（秒）
     refresh-expiration: 86400 # 刷新令牌过期时间（秒）
 
-# 令牌有效期配置（秒）
-sso:
-  token:
-    expiration: 86400
+# 日志配置
+logging:
+  level:
+    com.webapp.security.sso.api: DEBUG
+    org.springframework.security.oauth2: INFO
