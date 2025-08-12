@@ -2,15 +2,18 @@ package com.webapp.security.sso.api.service.impl;
 
 import com.webapp.security.core.entity.SysClientCredential;
 import com.webapp.security.core.mapper.SysClientCredentialMapper;
+import com.webapp.security.sso.api.config.ApiTokenProperties;
 import com.webapp.security.sso.api.exception.InvalidCredentialException;
 import com.webapp.security.sso.api.model.TokenResponse;
 import com.webapp.security.sso.api.service.TokenService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
+import org.springframework.security.oauth2.server.authorization.OAuth2Authorization;
+import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
+import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
 import org.springframework.stereotype.Service;
@@ -21,144 +24,152 @@ import java.time.Instant;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-/**
- * 令牌服务实现类
- */
+@Slf4j
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class TokenServiceImpl implements TokenService {
 
     private final SysClientCredentialMapper clientCredentialMapper;
     private final RegisteredClientRepository registeredClientRepository;
+    private final OAuth2AuthorizationService authorizationService;
     private final StringRedisTemplate redisTemplate;
-
-    @Qualifier("tokenPasswordEncoder")
     private final PasswordEncoder passwordEncoder;
+    private final ApiTokenProperties tokenProperties;
 
+    private static final String TOKEN_KEY_PREFIX = "openapi:token:";
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Override
     public TokenResponse generateToken(String appId, String appSecret) throws InvalidCredentialException {
-        // 1. 查找客户端凭证
         SysClientCredential credential = clientCredentialMapper.findByAppId(appId);
         if (credential == null) {
-            log.warn("找不到AppID: {} 对应的客户端凭证", appId);
             throw new InvalidCredentialException("无效的客户端凭证");
         }
-
-        // 2. 检查凭证状态
-        if (credential.getStatus() != 1) {
-            log.warn("客户端凭证 {} 已被禁用", appId);
+        if (credential.getStatus() == null || credential.getStatus() != 1) {
             throw new InvalidCredentialException("客户端凭证已被禁用");
         }
-
-        // 3. 验证密钥
         if (!passwordEncoder.matches(appSecret, credential.getAppSecret())) {
-            log.warn("客户端 {} 提供的密钥无效", appId);
             throw new InvalidCredentialException("无效的应用密钥");
         }
 
-        // 4. 查询OAuth2注册客户端信息
         String clientId = credential.getClientId();
-        if (clientId == null || clientId.isEmpty()) {
-            log.error("客户端凭证 {} 没有关联的OAuth客户端ID", appId);
+        if (!org.springframework.util.StringUtils.hasText(clientId)) {
             throw new InvalidCredentialException("客户端配置错误：缺少OAuth客户端ID");
         }
-
-        RegisteredClient registeredClient = registeredClientRepository.findById(clientId);
+        RegisteredClient registeredClient = registeredClientRepository.findByClientId(clientId);
         if (registeredClient == null) {
-            // 尝试通过clientId查找
-            registeredClient = registeredClientRepository.findByClientId(clientId);
-            if (registeredClient == null) {
-                log.error("找不到clientId为{}的OAuth2注册客户端", clientId);
-                throw new InvalidCredentialException("系统配置错误：OAuth客户端配置不存在");
-            }
+            throw new InvalidCredentialException("系统配置错误：OAuth客户端配置不存在");
         }
 
-        // 5. 获取令牌有效期，必须从数据库配置获取
-        Duration tokenTTL = registeredClient.getTokenSettings().getAccessTokenTimeToLive();
-        if (tokenTTL == null) {
-            log.error("客户端 {} (clientId={}) 未配置令牌有效期", appId, clientId);
-            throw new InvalidCredentialException("系统配置错误：未指定令牌有效期");
+        // TTL 策略
+        Duration ttl = registeredClient.getTokenSettings().getAccessTokenTimeToLive();
+        if (tokenProperties.getPolicy() == ApiTokenProperties.TokenPolicy.PROGRAM_CONFIGURED) {
+            ttl = Duration.ofSeconds(Math.max(60, tokenProperties.getProgramTtlSeconds()));
         }
-        long expiresIn = tokenTTL.getSeconds();
-
-        if (expiresIn <= 0) {
-            log.error("客户端 {} (clientId={}) 配置的令牌有效期无效: {}", appId, clientId, expiresIn);
-            throw new InvalidCredentialException("系统配置错误：令牌有效期必须大于0");
+        long expiresInSeconds = ttl.getSeconds();
+        if (expiresInSeconds <= 0) {
+            expiresInSeconds = 2 * 60 * 60;
+            ttl = Duration.ofSeconds(expiresInSeconds);
         }
 
-        // 6. 生成随机令牌
-        String accessToken = generateRandomToken();
+        // 生成高熵不透明令牌
+        String accessToken = randomUrlSafe(32);
 
-        // 7. 存储令牌信息到Redis
-        storeTokenInRedis(accessToken, credential, registeredClient, expiresIn);
+        // 构建并持久化授权记录（grant_type=client_credentials）
+        if (tokenProperties.isPersistInDb()) {
+            OAuth2Authorization authorization = buildAuthorization(registeredClient, appId, accessToken, ttl);
+            authorizationService.save(authorization);
+        }
 
-        // 8. 返回令牌响应
+        // 写入缓存
+        cacheToken(accessToken, credential, registeredClient, expiresInSeconds);
+
         return TokenResponse.builder()
                 .accessToken(accessToken)
-                .expiresIn(expiresIn)
-                .tokenType(OAuth2AccessToken.TokenType.BEARER.getValue())
+                .expiresIn(expiresInSeconds)
                 .build();
     }
 
     @Override
     public boolean validateToken(String token) {
-        // 直接检查Redis中是否存在该令牌的键
-        return Boolean.TRUE.equals(redisTemplate.hasKey(token));
+        String key = TOKEN_KEY_PREFIX + token;
+        if (Boolean.TRUE.equals(redisTemplate.hasKey(key))) {
+            return true;
+        }
+        // DB 回查
+        OAuth2Authorization auth = authorizationService.findByToken(token, OAuth2TokenType.ACCESS_TOKEN);
+        if (auth == null)
+            return false;
+        OAuth2Authorization.Token<OAuth2AccessToken> tokenObj = auth.getAccessToken();
+        if (tokenObj == null || tokenObj.getToken() == null)
+            return false;
+        Instant expiresAt = tokenObj.getToken().getExpiresAt();
+        if (expiresAt == null || Instant.now().isAfter(expiresAt))
+            return false;
+        // 回填缓存（TTL = 剩余寿命）
+        long ttlSeconds = Math.max(1, expiresAt.getEpochSecond() - Instant.now().getEpochSecond());
+        String registeredClientId = auth.getRegisteredClientId();
+        RegisteredClient rc = registeredClientRepository.findById(registeredClientId);
+        String appId = auth.getPrincipalName();
+        SysClientCredential cred = new SysClientCredential();
+        cred.setAppId(appId);
+        cacheToken(token, cred, rc, ttlSeconds);
+        return true;
     }
 
     @Override
     public String getAppIdFromToken(String token) {
-        // 直接从Redis中获取令牌相关信息
-        Map<Object, Object> tokenInfo = redisTemplate.opsForHash().entries(token);
-        return tokenInfo != null && !tokenInfo.isEmpty() ? (String) tokenInfo.get("appId") : null;
+        String key = TOKEN_KEY_PREFIX + token;
+        Map<Object, Object> info = redisTemplate.opsForHash().entries(key);
+        if (info != null && !info.isEmpty()) {
+            Object v = info.get("appId");
+            return v == null ? null : v.toString();
+        }
+        OAuth2Authorization auth = authorizationService.findByToken(token, OAuth2TokenType.ACCESS_TOKEN);
+        return auth == null ? null : auth.getPrincipalName();
     }
 
-    /**
-     * 生成随机令牌
-     * 
-     * @return Base64编码的随机字符串
-     */
-    private String generateRandomToken() {
-        byte[] randomBytes = new byte[32];
-        secureRandom.nextBytes(randomBytes);
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
-    }
-
-    /**
-     * 将令牌信息存储到Redis
-     * 
-     * @param token            访问令牌
-     * @param credential       客户端凭证
-     * @param registeredClient OAuth2注册客户端
-     * @param expiresIn        有效期（秒）
-     */
-    private void storeTokenInRedis(String token, SysClientCredential credential,
-            RegisteredClient registeredClient, long expiresIn) {
-        // 直接使用令牌作为键
-        String key = token;
-
+    private void cacheToken(String token, SysClientCredential credential, RegisteredClient registeredClient,
+            long ttlSeconds) {
+        String key = TOKEN_KEY_PREFIX + token;
         Map<String, String> tokenInfo = new HashMap<>();
         tokenInfo.put("appId", credential.getAppId());
-        tokenInfo.put("credentialId", String.valueOf(credential.getId()));
+        if (credential.getId() != null) {
+            tokenInfo.put("credentialId", String.valueOf(credential.getId()));
+        }
         tokenInfo.put("clientId", registeredClient.getClientId());
         tokenInfo.put("createTime", String.valueOf(Instant.now().getEpochSecond()));
-
-        // 从registeredClient获取作用域信息
-        tokenInfo.put("scope", String.join(" ", registeredClient.getScopes()));
-
-        // 将客户端名称也存入Redis，便于后续使用
+        Set<String> scopes = registeredClient.getScopes();
+        if (scopes != null && !scopes.isEmpty()) {
+            tokenInfo.put("scope", String.join(" ", scopes));
+        }
         if (registeredClient.getClientName() != null) {
             tokenInfo.put("clientName", registeredClient.getClientName());
         }
-
         redisTemplate.opsForHash().putAll(key, tokenInfo);
-        redisTemplate.expire(key, expiresIn, TimeUnit.SECONDS);
+        redisTemplate.expire(key, ttlSeconds, TimeUnit.SECONDS);
+    }
 
-        log.info("为客户端 {} 生成的令牌已存储，过期时间: {} 秒", credential.getAppId(), expiresIn);
+    private OAuth2Authorization buildAuthorization(RegisteredClient registeredClient, String principalName,
+            String tokenValue, Duration ttl) {
+        Instant issuedAt = Instant.now();
+        Instant expiresAt = issuedAt.plus(ttl);
+        OAuth2AccessToken accessToken = new OAuth2AccessToken(OAuth2AccessToken.TokenType.BEARER, tokenValue, issuedAt,
+                expiresAt);
+        return OAuth2Authorization.withRegisteredClient(registeredClient)
+                .principalName(principalName)
+                .authorizationGrantType(
+                        org.springframework.security.oauth2.core.AuthorizationGrantType.CLIENT_CREDENTIALS)
+                .token(accessToken)
+                .build();
+    }
+
+    private String randomUrlSafe(int numBytes) {
+        byte[] bytes = new byte[numBytes];
+        secureRandom.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 }

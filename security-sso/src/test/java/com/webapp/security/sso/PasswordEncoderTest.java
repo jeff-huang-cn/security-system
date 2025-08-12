@@ -16,13 +16,13 @@ public class PasswordEncoderTest {
     @Test
     public void testPasswordEncoderCompatibility() {
         // 模拟Admin服务中静态定义的密码编码器
-        BCryptPasswordEncoder adminEncoder = new BCryptPasswordEncoder(10);
+        BCryptPasswordEncoder adminEncoder = new BCryptPasswordEncoder();
 
         // 模拟SSO服务中Bean配置的密码编码器
-        BCryptPasswordEncoder ssoEncoder = new BCryptPasswordEncoder(10);
+        BCryptPasswordEncoder ssoEncoder = new BCryptPasswordEncoder();
 
         // 测试密码
-        String rawPassword = "testPassword123!";
+        String rawPassword = "RD3635OvoWKAlepK_EH5uTDWIIVRCNx0";
 
         // 使用Admin编码器加密
         String adminEncoded = adminEncoder.encode(rawPassword);

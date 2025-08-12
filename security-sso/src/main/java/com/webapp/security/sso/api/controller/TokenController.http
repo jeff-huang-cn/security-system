@@ -1,31 +1,22 @@
-### 环境变量设置
 @baseUrl = http://localhost:9000
-@appId = GDFtTPPXiIO5jCCe
-@appSecret = RD3635OvoWKAlepK_EH5uTDWIIVRCNx0
-@token = your_access_token_here
+@basic = SDEyZV9ZUlBuTEZMSE1ZcTpJUFNHLVliRERKNENfdHNjRC1PdVlmcmZTbVZXOFVLVg==
 
-### 获取访问令牌
-# 使用Basic认证请求令牌
-# 注意: 在实际HTTP客户端中，需手动对appId:appSecret进行Base64编码
-GET {{baseUrl}}/api/v1/token
-Authorization: Basic R0RGdFRQUFhpSU81akNDZTpSRDM2MzVPdm9XS0FsZXBLX0VINXVURFFJSVZSQ054MA==
+### 获取访问令牌（Header Basic，grant_type在查询参数）
+# @name issueTokenHeader
+POST {{baseUrl}}/api/v1/oauth/token?grant_type=client_credentials
+Content-Type: application/x-www-form-urlencoded
+Authorization: Basic {{basic}}
 
-### 验证令牌有效性（供OpenAPI服务调用）
-POST {{baseUrl}}/api/v1/validate
+### 获取访问令牌（URL 参数：Basic + base64）
+# @name issueTokenParamWithPrefix
+POST {{baseUrl}}/api/v1/oauth/token?grant_type=client_credentials&access_token=Basic%20{{basic}}
 Content-Type: application/x-www-form-urlencoded
 
-token={{token}}
-
-### 验证无效令牌
-POST {{baseUrl}}/api/v1/validate
+### 获取访问令牌（URL 参数：仅 base64）
+# @name issueTokenParamPure
+POST {{baseUrl}}/api/v1/oauth/token?grant_type=client_credentials&access_token={{basic}}
 Content-Type: application/x-www-form-urlencoded
 
-token=invalid_token_here
-
-### 获取令牌（使用openapi客户端）
-# 需要替换为实际编码后的值
-GET {{baseUrl}}/api/v1/token
-Authorization: Basic b3BlbmFwaTpzZWNyZXQ=
-
-### 没有认证头的请求示例
-GET {{baseUrl}}/api/v1/token 
+### 校验令牌（链式读取上一步 access_token）
+# @name validateToken
+POST {{baseUrl}}/api/v1/validate?token={{issueTokenHeader.response.body.$.access_token}}

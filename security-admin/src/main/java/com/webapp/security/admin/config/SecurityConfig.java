@@ -78,6 +78,6 @@ public class SecurityConfig {
 
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(10); // 明确指定工作因子为10(默认值)
+        return new BCryptPasswordEncoder();
     }
 }

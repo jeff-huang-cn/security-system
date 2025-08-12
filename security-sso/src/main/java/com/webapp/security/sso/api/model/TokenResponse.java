@@ -1,26 +1,15 @@
 package com.webapp.security.sso.api.model;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
-/**
- * 令牌响应数据模型
- */
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class TokenResponse {
-    /**
-     * 访问令牌
-     */
     private String accessToken;
-
-    /**
-     * 有效期（秒）
-     */
-    private long expiresIn;
-
-    /**
-     * 令牌类型
-     */
-    private String tokenType;
+    private Long expiresIn;
 }

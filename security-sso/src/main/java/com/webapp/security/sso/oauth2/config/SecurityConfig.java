@@ -95,7 +95,7 @@ public class SecurityConfig {
      * 默认安全过滤器链
      */
     @Bean
-    @Order(2)
+    @Order(99)
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests((authorize) -> authorize
@@ -137,7 +137,8 @@ public class SecurityConfig {
      * 认证提供者
      */
     @Bean
-    public AuthenticationProvider authenticationProvider(@Qualifier("passwordEncoder") PasswordEncoder passwordEncoder) {
+    public AuthenticationProvider authenticationProvider(
+            @Qualifier("passwordEncoder") PasswordEncoder passwordEncoder) {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
         authProvider.setUserDetailsService(userDetailsService);
         authProvider.setPasswordEncoder(passwordEncoder);

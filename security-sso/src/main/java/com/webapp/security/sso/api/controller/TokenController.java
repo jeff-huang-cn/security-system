@@ -4,20 +4,22 @@ import com.webapp.security.core.model.ResponseResult;
 import com.webapp.security.sso.api.exception.InvalidCredentialException;
 import com.webapp.security.sso.api.model.TokenResponse;
 import com.webapp.security.sso.api.service.TokenService;
+import com.webapp.security.sso.api.util.BasicCredentialUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * 令牌控制器
- * 处理客户端凭证认证和令牌生成
- */
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
@@ -26,78 +28,58 @@ public class TokenController {
 
     private final TokenService tokenService;
 
-    /**
-     * 获取访问令牌
-     * 客户端通过Basic认证方式发送appId和appSecret
-     * 
-     * @param request HTTP请求
-     * @return 令牌响应或错误信息
-     */
-    @GetMapping("/token")
-    public ResponseResult<TokenResponse> getToken(HttpServletRequest request) {
+    @PostMapping(value = "/oauth/token", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    public ResponseEntity<Map<String, Object>> issueToken(HttpServletRequest request,
+            @RequestParam("grant_type") String grantType) {
         try {
-            // 获取Authorization头
-            String authHeader = request.getHeader("Authorization");
-            if (authHeader == null || !authHeader.startsWith("Basic ")) {
-                log.warn("请求缺少Basic认证头");
-                return ResponseResult.failed("缺少Basic认证头");
+            if (!"client_credentials".equals(grantType)) {
+                return error(HttpStatus.BAD_REQUEST, "unsupported_grant_type", "授权类型必须为client_credentials");
             }
 
-            // 解码Basic认证信息
-            String base64Credentials = authHeader.substring(6).trim();
-            String credentials = new String(Base64.getDecoder().decode(base64Credentials), StandardCharsets.UTF_8);
-
-            // 分割appId和appSecret
-            String[] parts = credentials.split(":", 2);
-            if (parts.length != 2) {
-                log.warn("无效的认证格式");
-                return ResponseResult.failed("无效的认证格式");
+            String base64 = BasicCredentialUtil.resolveBasicBase64(request);
+            String[] creds = BasicCredentialUtil.decodeBasicPair(base64);
+            if (creds == null || creds.length != 2) {
+                return error(HttpStatus.UNAUTHORIZED, "invalid_client", "缺少或无效的Basic凭证");
             }
 
-            String appId = parts[0];
-            String appSecret = parts[1];
+            String appId = creds[0];
+            String appSecret = creds[1];
 
-            log.info("接收到来自appId: {} 的令牌请求", appId);
-
-            // 验证凭证并生成令牌
-            TokenResponse tokenResponse = tokenService.generateToken(appId, appSecret);
-            return ResponseResult.success(tokenResponse);
-
+            TokenResponse tr = tokenService.generateToken(appId, appSecret);
+            Map<String, Object> body = new HashMap<>();
+            body.put("access_token", tr.getAccessToken());
+            body.put("expires_in", tr.getExpiresIn());
+            return ResponseEntity.ok(body);
         } catch (InvalidCredentialException e) {
-            log.error("凭证验证失败: {}", e.getMessage());
-            return ResponseResult.failed(e.getMessage());
+            return error(HttpStatus.UNAUTHORIZED, "invalid_client", e.getMessage());
         } catch (Exception e) {
-            log.error("处理令牌请求时发生错误", e);
-            return ResponseResult.failed("服务器内部错误: " + e.getMessage());
+            log.error("发令牌发生异常", e);
+            return error(HttpStatus.INTERNAL_SERVER_ERROR, "server_error", "服务器内部错误: " + e.getMessage());
         }
     }
 
-    /**
-     * 验证令牌有效性
-     * 供OpenAPI服务调用
-     *
-     * @param token 访问令牌
-     * @return 验证结果
-     */
     @PostMapping("/validate")
-    public ResponseResult<Map<String, Object>> validateToken(@RequestParam String token) {
+    public ResponseResult<Map<String, Object>> validate(@RequestParam("token") String token) {
         try {
-            boolean isValid = tokenService.validateToken(token);
-            if (!isValid) {
+            boolean valid = tokenService.validateToken(token);
+            if (!valid) {
                 return ResponseResult.failed("无效的访问令牌");
             }
-
             String appId = tokenService.getAppIdFromToken(token);
-
-            Map<String, Object> result = new HashMap<>();
-            result.put("valid", true);
-            result.put("appId", appId);
-
-            log.info("验证令牌成功，appId: {}", appId);
-            return ResponseResult.success(result);
+            Map<String, Object> data = new HashMap<>();
+            data.put("valid", true);
+            data.put("appId", appId);
+            return ResponseResult.success(data);
         } catch (Exception e) {
-            log.error("验证令牌时发生错误", e);
+            log.error("校验令牌异常", e);
             return ResponseResult.failed("令牌验证失败: " + e.getMessage());
         }
+    }
+
+    private ResponseEntity<Map<String, Object>> error(HttpStatus status, String error, String description) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("error", error);
+        body.put("error_description", description);
+        return ResponseEntity.status(status).body(body);
     }
 }
