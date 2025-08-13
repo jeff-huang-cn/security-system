@@ -16,6 +16,7 @@ import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
+import org.springframework.security.oauth2.server.authorization.settings.OAuth2TokenFormat;
 import org.springframework.security.oauth2.server.authorization.settings.TokenSettings;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -205,7 +206,81 @@ public class OAuth2RegisteredClientService implements RegisteredClientRepository
                     }
                 }
 
-                tokenSettingsBuilder.idTokenSignatureAlgorithm(SignatureAlgorithm.RS256);
+                // 处理令牌格式设置
+                if (tokenSettingsMap.containsKey("settings.token.access-token-format")) {
+                    Object formatObj = tokenSettingsMap.get("settings.token.access-token-format");
+                    if (formatObj instanceof Map) {
+                        Map<?, ?> formatMap = (Map<?, ?>) formatObj;
+                        if (formatMap.containsKey("value")) {
+                            String formatValue = (String) formatMap.get("value");
+                            if ("reference".equals(formatValue)) {
+                                log.info("Setting token format to REFERENCE for client: {}", entity.getClientId());
+                                tokenSettingsBuilder.accessTokenFormat(OAuth2TokenFormat.REFERENCE);
+                            } else if ("self-contained".equals(formatValue)) {
+                                log.info("Setting token format to SELF_CONTAINED for client: {}", entity.getClientId());
+                                tokenSettingsBuilder.accessTokenFormat(OAuth2TokenFormat.SELF_CONTAINED);
+                            }
+                        }
+                    }
+                }
+
+                // 处理授权码生存时间
+                if (tokenSettingsMap.containsKey("settings.token.authorization-code-time-to-live")) {
+                    Object ttl = tokenSettingsMap.get("settings.token.authorization-code-time-to-live");
+                    if (ttl instanceof Number) {
+                        tokenSettingsBuilder
+                                .authorizationCodeTimeToLive(Duration.ofSeconds(((Number) ttl).longValue()));
+                    } else if (ttl instanceof List && ((List<?>) ttl).size() >= 2) {
+                        // 处理ArrayList格式的数据
+                        List<?> ttlList = (List<?>) ttl;
+                        Object value = ttlList.get(1);
+                        if (value instanceof Number) {
+                            log.info("Setting authorization code TTL from List: {} seconds",
+                                    ((Number) value).longValue());
+                            tokenSettingsBuilder
+                                    .authorizationCodeTimeToLive(Duration.ofSeconds(((Number) value).longValue()));
+                        }
+                    }
+                }
+
+                // 处理设备码生存时间
+                if (tokenSettingsMap.containsKey("settings.token.device-code-time-to-live")) {
+                    Object ttl = tokenSettingsMap.get("settings.token.device-code-time-to-live");
+                    if (ttl instanceof Number) {
+                        // 当前版本不支持deviceCodeTimeToLive方法
+                        log.info("Device code TTL setting found but not supported in current version: {} seconds",
+                                ((Number) ttl).longValue());
+                    } else if (ttl instanceof List && ((List<?>) ttl).size() >= 2) {
+                        // 处理ArrayList格式的数据
+                        List<?> ttlList = (List<?>) ttl;
+                        Object value = ttlList.get(1);
+                        if (value instanceof Number) {
+                            // 当前版本不支持deviceCodeTimeToLive方法
+                            log.info("Device code TTL setting found but not supported in current version: {} seconds",
+                                    ((Number) value).longValue());
+                        }
+                    }
+                }
+
+                // 处理ID令牌签名算法
+                if (tokenSettingsMap.containsKey("settings.token.id-token-signature-algorithm")) {
+                    Object sigAlg = tokenSettingsMap.get("settings.token.id-token-signature-algorithm");
+                    if (sigAlg instanceof String) {
+                        try {
+                            SignatureAlgorithm algorithm = SignatureAlgorithm.from((String) sigAlg);
+                            tokenSettingsBuilder.idTokenSignatureAlgorithm(algorithm);
+                            log.info("Setting id-token-signature-algorithm to: {}", sigAlg);
+                        } catch (Exception e) {
+                            log.warn("Invalid signature algorithm: {}, using default RS256", sigAlg);
+                            tokenSettingsBuilder.idTokenSignatureAlgorithm(SignatureAlgorithm.RS256);
+                        }
+                    } else {
+                        tokenSettingsBuilder.idTokenSignatureAlgorithm(SignatureAlgorithm.RS256);
+                    }
+                } else {
+                    tokenSettingsBuilder.idTokenSignatureAlgorithm(SignatureAlgorithm.RS256);
+                }
+
                 builder.tokenSettings(tokenSettingsBuilder.build());
             }
 

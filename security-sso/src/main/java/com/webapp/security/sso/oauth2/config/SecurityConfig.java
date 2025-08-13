@@ -51,6 +51,8 @@ import org.springframework.security.oauth2.server.authorization.token.OAuth2Toke
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
+import org.springframework.security.oauth2.server.authorization.token.OAuth2AccessTokenGenerator;
+import com.webapp.security.sso.oauth2.token.CustomTokenGenerator;
 
 /**
  * Spring Security配置
@@ -99,8 +101,9 @@ public class SecurityConfig {
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests((authorize) -> authorize
-                        .antMatchers("/login", "/logout", "/oauth2/**", "/.well-known/jwks.json",
-                                "/api/token-blacklist/**")
+                        .antMatchers("/login", "/logout", "/oauth2/**", "/v1/oauth2/**", "/.well-known/jwks.json",
+                                "/api/token-blacklist/**", "/favicon.ico",
+                                "/css/**", "/js/**", "/images/**", "/webjars/**", "/error")
                         .permitAll()
                         .anyRequest().authenticated())
                 .formLogin(form -> form
@@ -175,21 +178,29 @@ public class SecurityConfig {
         return new NimbusJwtEncoder(jwkSource);
     }
 
+
     /**
      * OAuth2令牌生成器
      */
     @Bean
     public OAuth2TokenGenerator<?> tokenGenerator(JwtEncoder jwtEncoder,
             OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer) {
+        // 创建JWT令牌生成器
         JwtGenerator jwtGenerator = new JwtGenerator(jwtEncoder);
         // 注册JWT自定义器，确保权限添加到JWT中
         jwtGenerator.setJwtCustomizer(jwtCustomizer);
         log.info("JWT customizer registered with JwtGenerator");
 
+        // 创建不透明令牌生成器
+        OAuth2AccessTokenGenerator accessTokenGenerator = new OAuth2AccessTokenGenerator();
+        log.info("Created OAuth2AccessTokenGenerator for opaque tokens");
+
+        // 创建刷新令牌生成器
         OAuth2RefreshTokenGenerator refreshTokenGenerator = new OAuth2RefreshTokenGenerator();
 
+        // 返回委托令牌生成器
         return new DelegatingOAuth2TokenGenerator(
-                jwtGenerator, refreshTokenGenerator);
+                jwtGenerator, accessTokenGenerator, refreshTokenGenerator);
     }
 
     /**
