@@ -5,9 +5,23 @@ import com.webapp.security.core.service.SysClientCredentialService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.core.AuthorizationGrantType;
+import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
+import org.springframework.security.oauth2.core.OAuth2AccessToken;
+import org.springframework.security.oauth2.core.OAuth2Token;
+import org.springframework.security.oauth2.server.authorization.OAuth2Authorization;
+import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
+import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
+import org.springframework.security.oauth2.server.authorization.authentication.OAuth2ClientAuthenticationToken;
+import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
+import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
+import org.springframework.security.oauth2.server.authorization.token.DefaultOAuth2TokenContext;
+import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenContext;
+import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenGenerator;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
@@ -15,7 +29,10 @@ import org.springframework.web.client.RestTemplate;
 
 import javax.servlet.http.HttpServletRequest;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -29,10 +46,13 @@ import java.util.Map;
 public class OpenApiTokenController {
 
     private static final Logger log = LoggerFactory.getLogger(OpenApiTokenController.class);
-
     private final SysClientCredentialService credentialService;
     private final PasswordEncoder passwordEncoder;
     private final RestTemplate restTemplate;
+
+    private final RegisteredClientRepository registeredClientRepository;
+    private final OAuth2AuthorizationService authorizationService;
+    private final OAuth2TokenGenerator<OAuth2Token> tokenGenerator;
 
     @Value("${oauth2.server.base-url:http://localhost:8080}")
     private String serverBaseUrl;
@@ -126,55 +146,71 @@ public class OpenApiTokenController {
 
             log.info("Credentials validated successfully for appId: {}", appId);
 
-            // 7. 构造OAuth2客户端凭证
-            String oauth2Credentials = OAUTH2_CLIENT_ID + ":" + OAUTH2_CLIENT_SECRET;
-            String oauth2BasicAuth = "Basic " + Base64.getEncoder()
-                    .encodeToString(oauth2Credentials.getBytes(StandardCharsets.UTF_8));
+            // 7. 直接使用Spring Security OAuth2的组件生成令牌
+            log.info("Generating token for appId: {} using client credentials: {}", appId, OAUTH2_CLIENT_ID);
 
-            // 8. 调用Spring Security OAuth2端点
-            String tokenUrl = serverBaseUrl + "/oauth2/token";
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-            headers.set("Authorization", oauth2BasicAuth);
-
-            MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
-            body.add("grant_type", "client_credentials");
-            body.add("token_format", "opaque");
-
-            // 添加额外的日志，查看请求详情
-            log.info("Calling OAuth2 token endpoint: {} with token_format=opaque", tokenUrl);
-
-            HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(body, headers);
-
-            ResponseEntity<Map> response = restTemplate.postForEntity(
-                    tokenUrl, requestEntity, Map.class);
-
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                Map<String, Object> tokenResponse = response.getBody();
-
-                // 添加日志，查看响应内容
-                log.info("Token response received: {}", tokenResponse);
-
-                // 检查令牌类型
-                String accessToken = (String) tokenResponse.get("access_token");
-                if (accessToken != null && accessToken.startsWith("ey")) {
-                    log.warn("Received JWT token instead of opaque token");
-                }
-
-                // 9. 构造标准响应格式
-                Map<String, Object> result = new HashMap<>();
-                result.put("access_token", tokenResponse.get("access_token"));
-                result.put("expires_in", tokenResponse.get("expires_in"));
-
-                log.info("Token generated successfully for appId: {}", appId);
-                return ResponseEntity.ok(result);
-            } else {
-                log.error("OAuth2 token endpoint returned error: {}", response.getStatusCode());
-                return createErrorResponse("server_error",
-                        "Failed to generate token", 500);
+            // 7.1 获取注册的客户端
+            RegisteredClient registeredClient = registeredClientRepository.findByClientId(OAUTH2_CLIENT_ID);
+            if (registeredClient == null) {
+                log.error("OAuth2 client not found: {}", OAUTH2_CLIENT_ID);
+                return createErrorResponse("invalid_client", "OAuth2 client not found", 401);
             }
 
+            // 7.2 验证客户端密钥
+            if (!passwordEncoder.matches(OAUTH2_CLIENT_SECRET, registeredClient.getClientSecret())) {
+                log.error("Invalid client secret for client: {}", OAUTH2_CLIENT_ID);
+                return createErrorResponse("invalid_client", "Invalid client credentials", 401);
+            }
+
+            // 7.3 创建认证令牌
+            OAuth2ClientAuthenticationToken clientPrincipal = new OAuth2ClientAuthenticationToken(
+                    registeredClient, ClientAuthenticationMethod.CLIENT_SECRET_BASIC, null);
+
+            // 7.4 创建令牌上下文
+            OAuth2TokenContext tokenContext = DefaultOAuth2TokenContext.builder()
+                    .registeredClient(registeredClient)
+                    .principal(clientPrincipal)
+                    .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
+                    .tokenType(OAuth2TokenType.ACCESS_TOKEN)
+                    .build();
+
+            // 7.5 生成访问令牌
+            OAuth2Token generatedToken = tokenGenerator.generate(tokenContext);
+            if (generatedToken == null) {
+                log.error("Failed to generate token for client: {}", OAUTH2_CLIENT_ID);
+                return createErrorResponse("server_error", "Failed to generate token", 500);
+            }
+
+            OAuth2AccessToken accessToken = (OAuth2AccessToken) generatedToken;
+
+            // 7.6 创建OAuth2Authorization并包含appId
+            OAuth2Authorization.Builder authorizationBuilder = OAuth2Authorization.withRegisteredClient(registeredClient)
+                    .principalName(OAUTH2_CLIENT_ID)
+                    .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
+                    .attribute("app_id", appId); // 添加appId作为属性
+
+            // 7.7 添加令牌到授权
+            authorizationBuilder.token(accessToken, (metadata) -> {
+                metadata.put(OAuth2Authorization.Token.CLAIMS_METADATA_NAME, Collections.emptyMap());
+            });
+
+            // 7.8 构建并保存授权
+            OAuth2Authorization authorization = authorizationBuilder.build();
+            authorizationService.save(authorization);
+            // 7.9 构造响应
+            Map<String, Object> result = new HashMap<>();
+            result.put("access_token", accessToken.getTokenValue());
+            // 计算过期时间（秒）
+            if (accessToken.getExpiresAt() != null) {
+                long expiresIn = ChronoUnit.SECONDS.between(Instant.now(), accessToken.getExpiresAt());
+                result.put("expires_in", expiresIn);
+            } else {
+                result.put("expires_in", registeredClient.getTokenSettings().getAccessTokenTimeToLive().getSeconds());
+            }
+            result.put("token_type", accessToken.getTokenType().getValue());
+
+            log.info("Authorization saved with appId: {}", appId);
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
             log.error("Error processing token request", e);
             return createErrorResponse("server_error",

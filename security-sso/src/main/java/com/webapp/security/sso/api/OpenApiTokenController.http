@@ -8,6 +8,13 @@ Content-Type: application/x-www-form-urlencoded
 
 grant_type=client_credentials
 
+###
+POST http://localhost:9000/oauth2/introspect
+Authorization: Basic SDEyZV9ZUlBuTEZMSE1ZcTpJUFNHLVliRERKNENfdHNjRC1PdVlmcmZTbVZXOFVLVg==
+Content-Type: application/x-www-form-urlencoded
+
+token=_KgzJs-fmEbW7G-whcQ7PuFzXl-Zvt8J
+
 ### 2. 测试无效的grant_type
 POST http://localhost:9000/v2/oauth2/token
 Authorization: Basic Y2wwMGI4MTU3MWQ4OTE2ZDI6MTZkYzU5ODUzNTgxZmNlNWI5MjFkMmU4OGRlN2RjYjU2ZTRiMzA1YQ==
