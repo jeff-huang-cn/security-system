@@ -6,8 +6,6 @@ CREATE TABLE IF NOT EXISTS sys_client_credential (
     app_id VARCHAR(100) NOT NULL UNIQUE COMMENT '应用唯一标识（AppID）',
     app_secret VARCHAR(200) NOT NULL COMMENT '应用密钥（BCrypt 加密存储）',
     client_id VARCHAR(100) NOT NULL COMMENT '关联 oauth2_registered_client.client_id（固定为 openapi）',
-    creator_user_id BIGINT NOT NULL COMMENT '创建者用户ID（关联 sys_user.user_id）',
-    creator_username VARCHAR(100) COMMENT '创建者用户名快照',
     status TINYINT DEFAULT 1 COMMENT '状态（1-启用，0-禁用）',
     remark VARCHAR(500) COMMENT '备注信息',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',

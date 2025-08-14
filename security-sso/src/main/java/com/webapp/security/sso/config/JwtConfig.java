@@ -1,4 +1,4 @@
-package com.webapp.security.sso.oauth2.config;
+package com.webapp.security.sso.config;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

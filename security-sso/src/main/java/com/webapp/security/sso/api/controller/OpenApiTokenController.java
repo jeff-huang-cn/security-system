@@ -166,7 +166,6 @@ public class OpenApiTokenController {
                 Map<String, Object> result = new HashMap<>();
                 result.put("access_token", tokenResponse.get("access_token"));
                 result.put("expires_in", tokenResponse.get("expires_in"));
-                result.put("token_type", tokenResponse.getOrDefault("token_type", "Bearer"));
 
                 log.info("Token generated successfully for appId: {}", appId);
                 return ResponseEntity.ok(result);

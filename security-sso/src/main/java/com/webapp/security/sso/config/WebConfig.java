@@ -1,4 +1,4 @@
-package com.webapp.security.sso.oauth2.config;
+package com.webapp.security.sso.config;
 
 import com.webapp.security.sso.oauth2.interceptor.ClientIdInterceptor;
 import lombok.RequiredArgsConstructor;

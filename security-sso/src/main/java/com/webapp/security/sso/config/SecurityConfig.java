@@ -1,10 +1,13 @@
-package com.webapp.security.sso.oauth2.config;
+package com.webapp.security.sso.config;
 
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
+import com.webapp.security.sso.api.service.ShortOpaqueTokenGenerator;
+import com.webapp.security.sso.api.token.CustomOpaqueTokenIntrospector;
+import com.webapp.security.sso.api.token.OpaqueTokenIntrospectionResponseEnhancer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.webapp.security.sso.oauth2.entity.OAuth2Jwk;
@@ -48,11 +51,10 @@ import org.springframework.security.oauth2.server.authorization.token.OAuth2Refr
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenGenerator;
 import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
+import org.springframework.security.oauth2.server.resource.introspection.OpaqueTokenIntrospector;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
-import org.springframework.security.oauth2.server.authorization.token.OAuth2AccessTokenGenerator;
-import com.webapp.security.sso.oauth2.token.CustomTokenGenerator;
 
 /**
  * Spring Security配置
@@ -90,6 +92,25 @@ public class SecurityConfig {
                 .oauth2ResourceServer((resourceServer) -> resourceServer
                         .jwt(Customizer.withDefaults()));
 
+        return http.build();
+    }
+
+    @Bean
+    @Order(2)
+    public SecurityFilterChain openApiSecurityFilterChain(
+            HttpSecurity http, OpaqueTokenIntrospector opaqueTokenIntrospector) throws Exception {
+        http
+                .antMatcher("/api/v1/**")
+                .authorizeHttpRequests(auth -> auth
+                        .anyRequest().authenticated()
+                )
+                .oauth2ResourceServer(oauth2 -> oauth2
+                        .opaqueToken(opaque -> opaque.introspector(opaqueTokenIntrospector))
+                )
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                );
         return http.build();
     }
 
@@ -178,7 +199,6 @@ public class SecurityConfig {
         return new NimbusJwtEncoder(jwkSource);
     }
 
-
     /**
      * OAuth2令牌生成器
      */
@@ -191,16 +211,16 @@ public class SecurityConfig {
         jwtGenerator.setJwtCustomizer(jwtCustomizer);
         log.info("JWT customizer registered with JwtGenerator");
 
-        // 创建不透明令牌生成器
-        OAuth2AccessTokenGenerator accessTokenGenerator = new OAuth2AccessTokenGenerator();
-        log.info("Created OAuth2AccessTokenGenerator for opaque tokens");
+        // 创建短不透明令牌生成器
+        ShortOpaqueTokenGenerator shortOpaqueTokenGenerator = new ShortOpaqueTokenGenerator();
+        log.info("Created ShortOpaqueTokenGenerator for opaque tokens");
 
         // 创建刷新令牌生成器
         OAuth2RefreshTokenGenerator refreshTokenGenerator = new OAuth2RefreshTokenGenerator();
 
         // 返回委托令牌生成器
         return new DelegatingOAuth2TokenGenerator(
-                jwtGenerator, accessTokenGenerator, refreshTokenGenerator);
+                jwtGenerator, shortOpaqueTokenGenerator, refreshTokenGenerator);
     }
 
     /**
@@ -223,4 +243,19 @@ public class SecurityConfig {
                 .issuer(baseUrl)
                 .build();
     }
+
+    /**
+     * 自定义不透明令牌自省器
+     * 用于增强令牌自省响应，添加权限信息
+     */
+    @Bean
+    @Primary
+    public OpaqueTokenIntrospector opaqueTokenIntrospector(
+            OAuth2AuthorizationService authorizationService,
+            OpaqueTokenIntrospectionResponseEnhancer responseEnhancer) {
+
+        // 创建直接使用OAuth2AuthorizationService的自定义自省器
+        return new CustomOpaqueTokenIntrospector(authorizationService, responseEnhancer);
+    }
+
 }

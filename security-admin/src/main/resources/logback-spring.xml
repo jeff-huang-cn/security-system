@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
     <!-- 定义日志文件的存储地址 -->
-    <property name="LOG_HOME" value="./logs" />
+    <property name="LOG_HOME" value="/opt/logs/security-admin" />
     <property name="APP_NAME" value="auth-backend" />
     
     <!-- 彩色日志依赖的渲染类 -->
