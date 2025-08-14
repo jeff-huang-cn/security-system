@@ -2,6 +2,7 @@ package com.webapp.security.sso.api.controller;
 
 import com.webapp.security.core.entity.SysClientCredential;
 import com.webapp.security.core.service.SysClientCredentialService;
+import com.webapp.security.sso.api.service.TokenIntrospectionService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,10 +32,8 @@ import javax.servlet.http.HttpServletRequest;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.Base64;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * OpenAPI Token控制器
@@ -53,6 +52,7 @@ public class OpenApiTokenController {
     private final RegisteredClientRepository registeredClientRepository;
     private final OAuth2AuthorizationService authorizationService;
     private final OAuth2TokenGenerator<OAuth2Token> tokenGenerator;
+    private final TokenIntrospectionService introspectionService;
 
     @Value("${oauth2.server.base-url:http://localhost:8080}")
     private String serverBaseUrl;
@@ -183,11 +183,14 @@ public class OpenApiTokenController {
 
             OAuth2AccessToken accessToken = (OAuth2AccessToken) generatedToken;
 
+            List<String> permissions = introspectionService.getPermissionsFromDatabase(appId);
+
             // 7.6 创建OAuth2Authorization并包含appId
             OAuth2Authorization.Builder authorizationBuilder = OAuth2Authorization.withRegisteredClient(registeredClient)
                     .principalName(OAUTH2_CLIENT_ID)
                     .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
-                    .attribute("app_id", appId); // 添加appId作为属性
+                    .attribute("app_id", appId)
+                    .attribute("permissions", String.join(" ", permissions));
 
             // 7.7 添加令牌到授权
             authorizationBuilder.token(accessToken, (metadata) -> {

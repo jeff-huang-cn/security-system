@@ -9,7 +9,7 @@ Content-Type: application/x-www-form-urlencoded
 grant_type=client_credentials
 
 ###
-POST http://localhost:9000/oauth2/introspect
+POST http://localhost:9000/v1/oauth2/introspect
 Authorization: Basic SDEyZV9ZUlBuTEZMSE1ZcTpJUFNHLVliRERKNENfdHNjRC1PdVlmcmZTbVZXOFVLVg==
 Content-Type: application/x-www-form-urlencoded
 

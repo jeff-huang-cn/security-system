@@ -31,18 +31,15 @@ public class TokenIntrospectionService {
 
     private static final Logger logger = LoggerFactory.getLogger(TokenIntrospectionService.class);
 
-    private final OAuth2AuthorizationService authorizationService;
     private final SysClientCredentialService clientCredentialService;
     private final SysCredentialResourceRelService credentialResourceRelService;
     private final SysResourceService resourceService;
 
     @Autowired
     public TokenIntrospectionService(
-            OAuth2AuthorizationService authorizationService,
             SysClientCredentialService clientCredentialService,
             SysCredentialResourceRelService credentialResourceRelService,
             SysResourceService resourceService) {
-        this.authorizationService = authorizationService;
         this.clientCredentialService = clientCredentialService;
         this.credentialResourceRelService = credentialResourceRelService;
         this.resourceService = resourceService;
@@ -51,24 +48,11 @@ public class TokenIntrospectionService {
     /**
      * 处理令牌自省请求
      *
-     * @param token 令牌值
+     * @param authorization 授权信息
      * @return 令牌自省结果
      */
-    public Map<String, Object> introspect(String token) {
-        logger.info("Introspecting token: {}...", token.substring(0, Math.min(token.length(), 8)));
-
+    public Map<String, Object> introspect(OAuth2Authorization authorization) {
         try {
-            // 使用OAuth2AuthorizationService查找令牌
-            OAuth2Authorization authorization = authorizationService.findByToken(
-                    token, OAuth2TokenType.ACCESS_TOKEN);
-
-            if (authorization == null) {
-                logger.warn("Token not found or invalid: {}", token);
-                Map<String, Object> response = new HashMap<>();
-                response.put("active", false);
-                return response;
-            }
-
             // 获取令牌属性
             Map<String, Object> claims = new HashMap<>();
             claims.put("active", true);
@@ -95,12 +79,18 @@ public class TokenIntrospectionService {
             claims.put("aud", Arrays.asList("api://default"));
             String appId = authorization.getAttribute("app_id");
             // 从数据库获取权限信息
-            List<String> permissions = getPermissionsFromDatabase(appId);
-            if (!permissions.isEmpty()) {
-                claims.put("authorities", String.join(" ", permissions));
-                claims.put("scope", String.join(" ", permissions));
-            } else {
-                logger.warn("No permissions found for client: {}", clientId);
+            //List<String> permissions = getPermissionsFromDatabase(appId);
+            //if (!permissions.isEmpty()) {
+            //    claims.put("authorities", String.join(" ", permissions));
+            //    claims.put("scope", String.join(" ", permissions));
+            //} else {
+            //    logger.warn("No permissions found for client: {}", clientId);
+            //}
+
+            String permissions = authorization.getAttribute("permissions");
+            if (permissions != null) {
+                claims.put("authorities", permissions);
+                claims.put("scope", permissions);
             }
 
             logger.info("Token introspection completed successfully with claims: {}", claims);
@@ -120,7 +110,7 @@ public class TokenIntrospectionService {
      * @param appId 客户端ID
      * @return 权限列表
      */
-    private List<String> getPermissionsFromDatabase(String appId) {
+    public List<String> getPermissionsFromDatabase(String appId) {
         logger.info("Getting permissions from database for client: {}", appId);
 
         List<String> permissions = new ArrayList<>();
