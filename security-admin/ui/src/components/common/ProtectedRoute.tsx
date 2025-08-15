@@ -74,53 +74,18 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, permission })
     );
   }
   
-  // 未认证状态
+  // 未认证状态 - 直接跳转到登录页面
   if (!isAuthorized) {
-    return (
-      <div style={{ padding: 24, textAlign: 'center' }}>
-        <h2>登录已过期</h2>
-        <p>您的登录已过期，请重新登录</p>
-        <button 
-          onClick={() => window.location.replace('/login')}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: '#1890ff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
-          重新登录
-        </button>
-      </div>
-    );
+    console.log('ProtectedRoute: 用户未认证，直接跳转到登录页面');
+    window.location.replace('/login');
+    return null; // 返回null，因为页面会跳转
   }
 
-  // 权限不足状态
+  // 权限不足状态 - 直接跳转到登录页面
   if (!hasRequiredPermission) {
-    console.log('ProtectedRoute: 权限不足，显示权限提示');
-    return (
-      <div style={{ padding: 24, textAlign: 'center' }}>
-        <h2>权限不足</h2>
-        <p>您没有访问此页面的权限</p>
-        <p>所需权限: {Array.isArray(permission) ? permission.join(', ') : permission}</p>
-        <button 
-          onClick={() => window.location.replace('/dashboard')}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: '#1890ff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            marginTop: '16px'
-          }}
-        >
-          返回首页
-        </button>
-      </div>
-    );
+    console.log('ProtectedRoute: 权限不足，直接跳转到登录页面');
+    window.location.replace('/login');
+    return null; // 返回null，因为页面会跳转
   }
 
   // 已认证且有权限
