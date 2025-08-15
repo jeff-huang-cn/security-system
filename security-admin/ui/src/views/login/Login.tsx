@@ -1,7 +1,10 @@
 ﻿import React, { useState } from "react";
 import { Form, Input, Button, Card, message, Typography, Space } from "antd";
-import { UserOutlined, LockOutlined, LoginOutlined } from "@ant-design/icons";
+import { UserOutlined, LockOutlined, LoginOutlined, WechatOutlined } from "@ant-design/icons";
 import { authService } from "../../services/authService";
+
+// API基础URL
+const API_BASE_URL = process.env.REACT_APP_AUTH_BASE_URL || 'http://localhost:9000';
 
 const { Title, Text } = Typography;
 
@@ -34,6 +37,11 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleWechatLogin = () => {
+    // 跳转到微信授权页面
+    window.location.href = `${API_BASE_URL}/oauth2/wechat/authorize`;
   };
 
   return (
@@ -130,6 +138,19 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               }}
             >
               {loading ? "登录中..." : "登录"}
+            </Button>
+          </Form.Item>
+
+          {/* 添加微信登录按钮 */}
+          <Form.Item>
+            <Button 
+              type="default" 
+              icon={<WechatOutlined />} 
+              className="login-form-button wechat-login-button" 
+              onClick={handleWechatLogin}
+              style={{ backgroundColor: '#07C160', color: '#fff', border: 'none' }}
+            >
+              微信登录
             </Button>
           </Form.Item>
         </Form>

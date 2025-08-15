@@ -1,9 +1,11 @@
 package com.webapp.security.sso.oauth2.controller;
 
+import com.webapp.security.core.config.ClientIdConfig;
 import com.webapp.security.sso.oauth2.context.ClientContext;
 import com.webapp.security.sso.oauth2.model.LoginRequest;
 import com.webapp.security.sso.oauth2.model.RefreshTokenRequest;
 import com.webapp.security.sso.oauth2.model.LogoutRequest;
+import com.webapp.security.sso.oauth2.service.OAuth2Utils;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,16 +18,10 @@ import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.security.oauth2.core.OAuth2RefreshToken;
 import org.springframework.security.oauth2.core.OAuth2Token;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.authorization.OAuth2Authorization;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
 import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
-import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
-import org.springframework.security.oauth2.server.authorization.context.AuthorizationServerContext;
-import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
-import org.springframework.security.oauth2.server.authorization.token.DefaultOAuth2TokenContext;
-import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenGenerator;
 import org.springframework.web.bind.annotation.*;
 
@@ -45,9 +41,13 @@ public class OAuth2Controller {
 
     private final AuthenticationManager authenticationManager;
     private final OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator;
-    private final RegisteredClientRepository registeredClientRepository;
     private final OAuth2AuthorizationService authorizationService;
-    private final AuthorizationServerSettings authorizationServerSettings;
+
+    // 添加OAuth2Utils依赖
+    private final OAuth2Utils oAuth2Utils;
+
+    // 添加ClientIdConfig依赖
+    private final ClientIdConfig clientIdConfig;
 
     /**
      * 用户登录 - 使用OAuth2TokenContext方式
@@ -55,12 +55,15 @@ public class OAuth2Controller {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
         try {
-            // 从ClientContext获取clientId
+            // 从ClientContext获取clientId，如果为空则使用默认的webapp客户端ID
             String clientId = ClientContext.getClientId();
+            if (clientId == null || clientId.trim().isEmpty()) {
+                clientId = clientIdConfig.getWebappClientId();
+            }
             log.info("OAuth2 login attempt for user: {}, clientId: {}", loginRequest.getUsername(), clientId);
 
             // 1. 获取注册的客户端
-            RegisteredClient registeredClient = getRegisteredClient(clientId);
+            RegisteredClient registeredClient = oAuth2Utils.getRegisteredClient(clientId);
 
             // 2. 进行身份验证
             Authentication authentication = authenticationManager.authenticate(
@@ -76,10 +79,11 @@ public class OAuth2Controller {
                     .authorizedScopes(registeredClient.getScopes());
 
             // 5. 生成Access Token
-            OAuth2AccessToken accessToken = generateAccessToken(authentication, registeredClient, authorizationBuilder);
+            OAuth2AccessToken accessToken = oAuth2Utils.generateAccessToken(authentication, registeredClient,
+                    authorizationBuilder);
 
             // 6. 生成Refresh Token（可选）
-            OAuth2RefreshToken refreshToken = generateRefreshToken(authentication, registeredClient,
+            OAuth2RefreshToken refreshToken = oAuth2Utils.generateRefreshToken(authentication, registeredClient,
                     authorizationBuilder);
 
             // 7. 保存授权信息
@@ -136,118 +140,6 @@ public class OAuth2Controller {
     }
 
     /**
-     * 创建AuthorizationServerContext
-     */
-    private AuthorizationServerContext createAuthorizationServerContext() {
-        return new AuthorizationServerContext() {
-            @Override
-            public String getIssuer() {
-                return authorizationServerSettings.getIssuer();
-            }
-
-            @Override
-            public AuthorizationServerSettings getAuthorizationServerSettings() {
-                return authorizationServerSettings;
-            }
-        };
-    }
-
-    /**
-     * 生成Access Token - 使用OAuth2TokenContext
-     */
-    private OAuth2AccessToken generateAccessToken(Authentication authentication,
-            RegisteredClient registeredClient,
-            OAuth2Authorization.Builder authorizationBuilder) {
-
-        // 创建OAuth2TokenContext
-        OAuth2TokenContext tokenContext = DefaultOAuth2TokenContext.builder()
-                .registeredClient(registeredClient)
-                .principal(authentication)
-                .authorizationServerContext(createAuthorizationServerContext())
-                .tokenType(OAuth2TokenType.ACCESS_TOKEN)
-                .authorizationGrantType(org.springframework.security.oauth2.core.AuthorizationGrantType.PASSWORD)
-                .authorizedScopes(registeredClient.getScopes())
-                .build();
-
-        // 使用TokenGenerator生成令牌
-        OAuth2Token generatedToken = tokenGenerator.generate(tokenContext);
-
-        if (!(generatedToken instanceof Jwt)) {
-            throw new IllegalStateException("生成的令牌不是Jwt类型");
-        }
-
-        Jwt jwt = (Jwt) generatedToken;
-
-        // 将JWT包装为OAuth2AccessToken
-        OAuth2AccessToken accessToken = new OAuth2AccessToken(
-                OAuth2AccessToken.TokenType.BEARER,
-                jwt.getTokenValue(),
-                jwt.getIssuedAt(),
-                jwt.getExpiresAt(),
-                registeredClient.getScopes());
-
-        // 将令牌添加到授权构建器
-        authorizationBuilder.accessToken(accessToken);
-
-        return accessToken;
-    }
-
-    /**
-     * 生成Refresh Token - 使用OAuth2TokenContext
-     */
-    private OAuth2RefreshToken generateRefreshToken(Authentication authentication,
-            RegisteredClient registeredClient,
-            OAuth2Authorization.Builder authorizationBuilder) {
-
-        // 检查客户端是否支持refresh token
-        if (!registeredClient.getAuthorizationGrantTypes().contains(
-                org.springframework.security.oauth2.core.AuthorizationGrantType.REFRESH_TOKEN)) {
-            return null;
-        }
-
-        // 创建OAuth2TokenContext
-        OAuth2TokenContext tokenContext = DefaultOAuth2TokenContext.builder()
-                .registeredClient(registeredClient)
-                .principal(authentication)
-                .authorizationServerContext(createAuthorizationServerContext())
-                .tokenType(OAuth2TokenType.REFRESH_TOKEN)
-                .authorizationGrantType(org.springframework.security.oauth2.core.AuthorizationGrantType.PASSWORD)
-                .authorizedScopes(registeredClient.getScopes())
-                .build();
-
-        // 使用TokenGenerator生成令牌
-        OAuth2Token generatedToken = tokenGenerator.generate(tokenContext);
-
-        if (!(generatedToken instanceof OAuth2RefreshToken)) {
-            return null;
-        }
-
-        OAuth2RefreshToken refreshToken = (OAuth2RefreshToken) generatedToken;
-
-        // 将令牌添加到授权构建器
-        authorizationBuilder.refreshToken(refreshToken);
-
-        return refreshToken;
-    }
-
-    /**
-     * 根据客户端ID获取注册客户端
-     * 每个应用在授权服务数据库添加后，通过请求传递clientId
-     */
-    private RegisteredClient getRegisteredClient(String clientId) {
-        if (clientId == null || clientId.trim().isEmpty()) {
-            throw new IllegalStateException("客户端ID不能为空");
-        }
-
-        RegisteredClient client = registeredClientRepository.findByClientId(clientId.trim());
-        if (client == null) {
-            throw new IllegalStateException("未找到客户端: " + clientId + "，请确保该客户端已在授权服务器中注册");
-        }
-
-        return client;
-    }
-
-    /**
      * 用户登出 - 撤销授权记录
      * 授权记录是指OAuth2Authorization，包含用户的访问令牌、刷新令牌等信息
      * 这不是第三方授权登录记录，而是本授权服务器颁发的令牌授权记录
@@ -255,8 +147,11 @@ public class OAuth2Controller {
     @PostMapping("/logout")
     public ResponseEntity<?> logout(@RequestBody LogoutRequest logoutRequest) {
         try {
-            // 从ClientContext获取clientId
+            // 从ClientContext获取clientId，如果为空则使用默认的webapp客户端ID
             String clientId = ClientContext.getClientId();
+            if (clientId == null || clientId.trim().isEmpty()) {
+                clientId = clientIdConfig.getWebappClientId();
+            }
             String accessToken = logoutRequest.getAccessToken();
 
             if (accessToken == null || accessToken.trim().isEmpty()) {
@@ -273,8 +168,8 @@ public class OAuth2Controller {
             if (authorization != null) {
                 // 2. 验证客户端ID（如果提供）
                 if (clientId != null && !clientId.trim().isEmpty()) {
-                    // 直接通过clientId查找RegisteredClient，然后比较registeredClientId
-                    RegisteredClient registeredClient = registeredClientRepository.findByClientId(clientId);
+                    // 使用OAuth2Utils获取RegisteredClient
+                    RegisteredClient registeredClient = oAuth2Utils.getRegisteredClient(clientId);
                     if (registeredClient == null
                             || !registeredClient.getId().equals(authorization.getRegisteredClientId())) {
                         Map<String, Object> errorResponse = new HashMap<>();
@@ -324,8 +219,11 @@ public class OAuth2Controller {
             javax.servlet.http.HttpServletRequest request) {
         try {
             String refreshTokenValue = refreshTokenRequest.getRefreshToken();
-            // 从ClientContext获取clientId
+            // 从ClientContext获取clientId，如果为空则使用默认的webapp客户端ID
             String clientId = ClientContext.getClientId();
+            if (clientId == null || clientId.trim().isEmpty()) {
+                clientId = clientIdConfig.getWebappClientId();
+            }
 
             // 1. 验证请求参数
             if (refreshTokenValue == null || refreshTokenValue.trim().isEmpty()) {
@@ -355,7 +253,7 @@ public class OAuth2Controller {
 
             // 3. 验证客户端ID
             // 直接通过clientId查找RegisteredClient，然后比较registeredClientId
-            RegisteredClient registeredClientForValidation = registeredClientRepository.findByClientId(clientId);
+            RegisteredClient registeredClientForValidation = oAuth2Utils.getRegisteredClient(clientId);
             if (registeredClientForValidation == null
                     || !registeredClientForValidation.getId().equals(authorization.getRegisteredClientId())) {
                 Map<String, Object> errorResponse = new HashMap<>();
@@ -375,7 +273,7 @@ public class OAuth2Controller {
             }
 
             // 5. 获取注册客户端和用户信息
-            RegisteredClient registeredClient = getRegisteredClient(clientId);
+            RegisteredClient registeredClient = oAuth2Utils.getRegisteredClient(clientId);
 
             // 6. 重新构建认证信息 - 需要从UserDetailsService重新加载用户权限
             String username = authorization.getPrincipalName();
@@ -399,7 +297,7 @@ public class OAuth2Controller {
             OAuth2Authorization.Builder authorizationBuilder = OAuth2Authorization.from(authorization);
 
             // 8. 生成新的访问令牌
-            OAuth2AccessToken newAccessToken = generateAccessToken(authentication, registeredClient,
+            OAuth2AccessToken newAccessToken = oAuth2Utils.generateAccessToken(authentication, registeredClient,
                     authorizationBuilder);
 
             // 9. 使用刷新令牌轮换机制
@@ -408,7 +306,7 @@ public class OAuth2Controller {
                     authorization.getPrincipalName(), clientId);
 
             // 生成全新的刷新令牌，不再重用旧的
-            OAuth2RefreshToken newRefreshToken = generateRefreshToken(authentication, registeredClient,
+            OAuth2RefreshToken newRefreshToken = oAuth2Utils.generateRefreshToken(authentication, registeredClient,
                     authorizationBuilder);
 
             // 仍然生成新的授权ID，避免覆盖原授权记录

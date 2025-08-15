@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.webapp.security.core.entity.SysClientCredential;
 import com.webapp.security.core.mapper.SysClientCredentialMapper;
 import com.webapp.security.core.service.SysClientCredentialService;
+import com.webapp.security.core.config.ClientIdConfig;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -21,6 +22,7 @@ public class SysClientCredentialServiceImpl extends ServiceImpl<SysClientCredent
 
     private final SysClientCredentialMapper credentialMapper;
     private final PasswordEncoder passwordEncoder;
+    private final ClientIdConfig clientIdConfig;
     private static final SecureRandom RANDOM = new SecureRandom();
 
     @Override
@@ -44,7 +46,7 @@ public class SysClientCredentialServiceImpl extends ServiceImpl<SysClientCredent
         SysClientCredential entity = new SysClientCredential();
         entity.setAppId(appId);
         entity.setAppSecret(passwordEncoder.encode(plain));
-        entity.setClientId("openapi");
+        entity.setClientId(clientIdConfig.getApiClientId()); // 使用配置的API客户端ID
         entity.setRemark(remark);
         entity.setStatus(1);
         this.save(entity);
@@ -81,7 +83,7 @@ public class SysClientCredentialServiceImpl extends ServiceImpl<SysClientCredent
         SysClientCredential entity = new SysClientCredential();
         entity.setAppId(appId);
         entity.setAppSecret(passwordEncoder.encode(plainSecret));
-        entity.setClientId("openapi");
+        entity.setClientId(clientIdConfig.getApiClientId()); // 使用配置的API客户端ID
         entity.setCreateBy(username);
         entity.setUpdateBy(username);
         entity.setRemark(remark);

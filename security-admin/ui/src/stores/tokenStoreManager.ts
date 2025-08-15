@@ -1,157 +1,85 @@
-import { create } from 'zustand';
-import axios from 'axios';
+/**
+ * 令牌存储管理器
+ * 用于管理认证令牌的存储、获取和清除
+ */
+class TokenStoreManager {
+  private readonly TOKEN_KEY = 'auth_token';
+  private readonly TOKEN_TYPE_KEY = 'auth_token_type';
+  private readonly EXPIRES_KEY = 'auth_expires_at';
 
-// 请求队列项类型
-interface QueueItem {
-  config: any;
-  resolve: (value: any) => void;
-  reject: (error: any) => void;
-}
+  /**
+   * 设置认证令牌
+   * @param token 令牌值
+   * @param tokenType 令牌类型，默认为Bearer
+   * @param expiresIn 过期时间（秒）
+   */
+  public setToken(token: string, tokenType: string = 'Bearer', expiresIn?: number): void {
+    localStorage.setItem(this.TOKEN_KEY, token);
+    localStorage.setItem(this.TOKEN_TYPE_KEY, tokenType);
 
-// 定义状态接口
-interface AuthState {
-  // 状态属性
-  accessToken: string | null;
-  refreshToken: string | null;
-  tokenExpiry: number | null;
-  isRefreshing: boolean;
-  requestQueue: QueueItem[];
-  
-  // 方法
-  setTokens: (accessToken: string, refreshToken: string, expiresIn: number) => void;
-  clearTokens: () => void;
-  isTokenExpired: () => boolean;
-  isTokenExpiringSoon: (bufferMinutes?: number) => boolean;
-  refreshTokenAsync: () => Promise<any>;
-  processQueue: (newToken: string) => void;
-  clearQueue: (error?: any) => void;
-}
-
-// 创建store
-export const useAuthStore = create<AuthState>((set, get) => ({
-  // 初始状态
-  accessToken: localStorage.getItem('access_token'),
-  refreshToken: localStorage.getItem('refresh_token'),
-  tokenExpiry: Number(localStorage.getItem('token_expiry')) || null,
-  isRefreshing: false,
-  requestQueue: [],
-  
-  // 设置tokens
-  setTokens: (accessToken, refreshToken, expiresIn) => {
-    const expiryTime = Date.now() + (expiresIn * 1000);
-    
-    localStorage.setItem('access_token', accessToken);
-    localStorage.setItem('refresh_token', refreshToken);
-    localStorage.setItem('token_expiry', expiryTime.toString());
-    
-    set({ 
-      accessToken, 
-      refreshToken, 
-      tokenExpiry: expiryTime 
-    });
-  },
-  
-  // 清除tokens
-  clearTokens: () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('token_expiry');
-    
-    set({ 
-      accessToken: null, 
-      refreshToken: null, 
-      tokenExpiry: null 
-    });
-  },
-  
-  // 检查token是否已过期
-  isTokenExpired: () => {
-    const { tokenExpiry } = get();
-    if (!tokenExpiry) return true;
-    return Date.now() >= tokenExpiry;
-  },
-  
-  // 检查token是否即将过期（默认2分钟）
-  isTokenExpiringSoon: (bufferMinutes = 2) => {
-    const { tokenExpiry } = get();
-    if (!tokenExpiry) return true;
-    
-    const bufferMs = bufferMinutes * 60 * 1000;
-    return (tokenExpiry - Date.now()) <= bufferMs;
-  },
-  
-  // 刷新token
-  refreshTokenAsync: async () => {
-    const { refreshToken: currentRefreshToken, isRefreshing } = get();
-    
-    // 如果没有refreshToken，直接失败
-    if (!currentRefreshToken) {
-      return Promise.reject(new Error('No refresh token available'));
+    if (expiresIn) {
+      const expiresAt = new Date().getTime() + expiresIn * 1000;
+      localStorage.setItem(this.EXPIRES_KEY, expiresAt.toString());
     }
-    
-    // 如果已经在刷新中，不重复刷新
-    if (isRefreshing) {
-      return new Promise((resolve, reject) => {
-        const checkRefreshing = setInterval(() => {
-          if (!get().isRefreshing) {
-            clearInterval(checkRefreshing);
-            resolve(get().accessToken);
-          }
-        }, 100);
-        
-        setTimeout(() => {
-          clearInterval(checkRefreshing);
-          reject(new Error('Token refresh timeout'));
-        }, 10000);
-      });
-    }
-    
-    try {
-      set({ isRefreshing: true });
-      
-      const response = await axios.post('/oauth2/refresh', { 
-        refreshToken: currentRefreshToken 
-      });
-      
-      const { access_token, refresh_token, expires_in } = response.data;
-      
-      get().setTokens(access_token, refresh_token, expires_in);
-      get().processQueue(access_token);
-      
-      return response.data;
-    } catch (error) {
-      get().clearTokens();
-      get().clearQueue(error);
-      throw error;
-    } finally {
-      set({ isRefreshing: false });
-    }
-  },
-  
-  // 处理队列中的请求
-  processQueue: (newToken) => {
-    const { requestQueue } = get();
-    
-    requestQueue.forEach(({ config, resolve, reject }) => {
-      config.headers = config.headers || {};
-      config.headers.Authorization = `Bearer ${newToken}`;
-      
-      axios(config)
-        .then(response => resolve(response))
-        .catch(error => reject(error));
-    });
-    
-    set({ requestQueue: [] });
-  },
-  
-  // 清空队列并拒绝所有请求
-  clearQueue: (error) => {
-    const { requestQueue } = get();
-    
-    requestQueue.forEach(({ reject }) => {
-      reject(error || new Error('Authentication failed'));
-    });
-    
-    set({ requestQueue: [] });
   }
-}));
+
+  /**
+   * 获取认证令牌
+   * @returns 认证令牌，如果不存在则返回null
+   */
+  public getToken(): string | null {
+    return localStorage.getItem(this.TOKEN_KEY);
+  }
+
+  /**
+   * 获取认证令牌类型
+   * @returns 认证令牌类型，如果不存在则返回Bearer
+   */
+  public getTokenType(): string {
+    return localStorage.getItem(this.TOKEN_TYPE_KEY) || 'Bearer';
+  }
+
+  /**
+   * 获取完整的认证头
+   * @returns 完整的认证头，格式为"Bearer {token}"
+   */
+  public getAuthHeader(): string {
+    const token = this.getToken();
+    const tokenType = this.getTokenType();
+    return token ? `${tokenType} ${token}` : '';
+  }
+
+  /**
+   * 检查令牌是否已过期
+   * @returns 如果令牌已过期则返回true，否则返回false
+   */
+  public isTokenExpired(): boolean {
+    const expiresAt = localStorage.getItem(this.EXPIRES_KEY);
+    if (!expiresAt) {
+      return false; // 没有过期时间，视为未过期
+    }
+
+    const now = new Date().getTime();
+    return now > parseInt(expiresAt, 10);
+  }
+
+  /**
+   * 检查是否已认证
+   * @returns 如果已认证则返回true，否则返回false
+   */
+  public isAuthenticated(): boolean {
+    const token = this.getToken();
+    return !!token && !this.isTokenExpired();
+  }
+
+  /**
+   * 清除认证令牌
+   */
+  public clearToken(): void {
+    localStorage.removeItem(this.TOKEN_KEY);
+    localStorage.removeItem(this.TOKEN_TYPE_KEY);
+    localStorage.removeItem(this.EXPIRES_KEY);
+  }
+}
+
+export const tokenStoreManager = new TokenStoreManager();

@@ -34,6 +34,9 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeRequests(authz -> authz
                         .antMatchers("/", "/static/**", "/favicon.ico", "/actuator/health").permitAll()
+                        // 允许微信OAuth2相关路径
+                        .antMatchers("/oauth2/wechat/**", "/oauth2/callback/**").permitAll()
+                        .antMatchers("/api/oauth2/**").permitAll()
                         .antMatchers("/api/**").authenticated()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2

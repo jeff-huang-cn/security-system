@@ -88,6 +88,22 @@ oauth2:
     enable-replay-protection: false
     # 时间戳有效期（秒）
     timestamp-valid-seconds: 300
+  # 客户端ID配置
+  client:
+    # API客户端ID
+    api-client-id: openapi
+    # Web应用客户端ID
+    webapp-client-id: webapp-client
+
+# 微信OAuth2配置
+wechat:
+  oauth2:
+    app-id: ${WECHAT_APP_ID:wx985e9aa00f16b0e0}
+    app-secret: ${WECHAT_APP_SECRET:0ed86594047220b717cda81a1b355e23}
+    redirect-uri: ${WECHAT_REDIRECT_URI:https://2lr8116893nu.vicp.fun/oauth2/wechat/callback}
+    authorize-url: https://open.weixin.qq.com/connect/qrconnect
+    access-token-url: https://api.weixin.qq.com/sns/oauth2/access_token
+    user-info-url: https://api.weixin.qq.com/sns/userinfo
 
 # 自定义JWT配置
 custom:
@@ -97,8 +113,14 @@ custom:
     expiration: 3600 # 访问令牌过期时间（秒）
     refresh-expiration: 86400 # 刷新令牌过期时间（秒）
 
+# JWT配置（用于微信登录）
+jwt:
+  secret: ${JWT_SECRET:wechat-oauth2-jwt-secret-key-must-be-at-least-256-bits-long}
+  expiration: 86400 # 令牌过期时间（秒）
+
 # 日志配置
 logging:
   level:
     com.webapp.security.sso.api: DEBUG
+    com.webapp.security.sso.oauth2: DEBUG
     org.springframework.security.oauth2: INFO

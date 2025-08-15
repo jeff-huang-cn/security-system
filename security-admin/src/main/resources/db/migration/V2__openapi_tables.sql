@@ -12,8 +12,7 @@ CREATE TABLE IF NOT EXISTS sys_client_credential (
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     create_by VARCHAR(50) COMMENT '创建人',
     update_by VARCHAR(50) COMMENT '更新人',
-    INDEX idx_client_id (client_id),
-    INDEX idx_creator_user_id (creator_user_id)
+    INDEX idx_client_id (client_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AppID/AppSecret 凭证表';
 
 -- sys_resource
