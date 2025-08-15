@@ -9,8 +9,8 @@ import org.springframework.security.oauth2.server.authorization.token.OAuth2Toke
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Base64;
 import java.util.Random;
+import java.security.SecureRandom;
 
 /**
  * 自定义不透明令牌生成器
@@ -18,8 +18,7 @@ import java.util.Random;
  */
 public class ShortOpaqueTokenGenerator implements OAuth2TokenGenerator<OAuth2Token> {
 
-    private static final int TOKEN_LENGTH = 32; // 生成32字符的令牌
-    private static final Random RANDOM = new Random();
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     @Override
     public OAuth2Token generate(OAuth2TokenContext context) {
@@ -49,11 +48,22 @@ public class ShortOpaqueTokenGenerator implements OAuth2TokenGenerator<OAuth2Tok
     }
 
     /**
-     * 生成更短的令牌值
+     * 生成16进制格式的令牌值
+     * 格式类似: 5a89faa7b4fe1ba7537679c0d7c94039
      */
     private String generateShortToken() {
-        byte[] randomBytes = new byte[24]; // 24字节会生成约32个Base64字符
-        RANDOM.nextBytes(randomBytes);
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
+        byte[] randomBytes = new byte[16]; // 16字节会生成32个16进制字符
+        SECURE_RANDOM.nextBytes(randomBytes);
+
+        StringBuilder hexString = new StringBuilder();
+        for (byte b : randomBytes) {
+            String hex = Integer.toHexString(0xff & b);
+            if (hex.length() == 1) {
+                hexString.append('0');
+            }
+            hexString.append(hex);
+        }
+
+        return hexString.toString();
     }
 }

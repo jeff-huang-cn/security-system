@@ -97,13 +97,6 @@ public class SecurityConfig {
         @Order(2)
         public SecurityFilterChain openApiSecurityFilterChain(
                         HttpSecurity http) throws Exception {
-                //http
-                //                .antMatcher("/api/v1/**")
-                //                .authorizeHttpRequests(auth -> auth
-                //                                .anyRequest().authenticated())
-                //                .csrf(AbstractHttpConfigurer::disable)
-                //                .sessionManagement(session -> session
-                //                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
             http
                     // 使用requestMatchers()替代antMatcher()来匹配多个路径
                     .requestMatchers(matchers -> matchers
