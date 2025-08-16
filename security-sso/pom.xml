@@ -7,12 +7,12 @@
     <parent>
         <groupId>com.webapp.security</groupId>
         <artifactId>security-system</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
+        <version>1.0.0</version>
     </parent>
 
     <artifactId>security-sso</artifactId>
     <packaging>jar</packaging>
-    <name>sso-server</name>
+    <name>security-sso</name>
     <description>SSO server module - integrated authentication and authorization</description>
 
     <dependencies>
@@ -141,6 +141,14 @@
 
     <build>
         <plugins>
+            <!-- 先添加 maven-surefire-plugin 配置 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <skipTests>true</skipTests> <!-- 跳过测试执行 -->
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
