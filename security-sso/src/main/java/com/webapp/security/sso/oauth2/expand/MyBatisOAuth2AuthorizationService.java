@@ -1,4 +1,4 @@
-package com.webapp.security.sso.oauth2.service;
+package com.webapp.security.sso.oauth2.expand;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.Module;

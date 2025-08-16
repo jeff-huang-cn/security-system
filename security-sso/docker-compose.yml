@@ -21,9 +21,10 @@ services:
 #      SPRING_KAFKA_BOOTSTRAP_SERVERS: <Kafka主机IP>:9092
       # 其他 Kafka 相关配置（如分组、序列化等，按需添加）
 
-      SERVER_PORT: 9000  # 应用端口
+      SERVER_PORT: 9010  # 应用端口
+      SERVER_BASE_URL: http://host.docker.internal:9010
     ports:
-      - "9000:9000"  # 宿主机端口映射
+      - "9010:9010"  # 宿主机端口映射
     networks:
       - security-network
 

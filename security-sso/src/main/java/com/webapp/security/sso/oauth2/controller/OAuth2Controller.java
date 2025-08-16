@@ -5,7 +5,7 @@ import com.webapp.security.sso.oauth2.context.ClientContext;
 import com.webapp.security.sso.oauth2.model.LoginRequest;
 import com.webapp.security.sso.oauth2.model.RefreshTokenRequest;
 import com.webapp.security.sso.oauth2.model.LogoutRequest;
-import com.webapp.security.sso.oauth2.service.OAuth2Utils;
+import com.webapp.security.sso.oauth2.service.OAuth2Service;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,7 +44,7 @@ public class OAuth2Controller {
     private final OAuth2AuthorizationService authorizationService;
 
     // 添加OAuth2Utils依赖
-    private final OAuth2Utils oAuth2Utils;
+    private final OAuth2Service oAuth2Service;
 
     // 添加ClientIdConfig依赖
     private final ClientIdConfig clientIdConfig;
@@ -63,7 +63,7 @@ public class OAuth2Controller {
             log.info("OAuth2 login attempt for user: {}, clientId: {}", loginRequest.getUsername(), clientId);
 
             // 1. 获取注册的客户端
-            RegisteredClient registeredClient = oAuth2Utils.getRegisteredClient(clientId);
+            RegisteredClient registeredClient = oAuth2Service.getRegisteredClient(clientId);
 
             // 2. 进行身份验证
             Authentication authentication = authenticationManager.authenticate(
@@ -79,11 +79,11 @@ public class OAuth2Controller {
                     .authorizedScopes(registeredClient.getScopes());
 
             // 5. 生成Access Token
-            OAuth2AccessToken accessToken = oAuth2Utils.generateAccessToken(authentication, registeredClient,
+            OAuth2AccessToken accessToken = oAuth2Service.generateAccessToken(authentication, registeredClient,
                     authorizationBuilder);
 
             // 6. 生成Refresh Token（可选）
-            OAuth2RefreshToken refreshToken = oAuth2Utils.generateRefreshToken(authentication, registeredClient,
+            OAuth2RefreshToken refreshToken = oAuth2Service.generateRefreshToken(authentication, registeredClient,
                     authorizationBuilder);
 
             // 7. 保存授权信息
@@ -169,7 +169,7 @@ public class OAuth2Controller {
                 // 2. 验证客户端ID（如果提供）
                 if (clientId != null && !clientId.trim().isEmpty()) {
                     // 使用OAuth2Utils获取RegisteredClient
-                    RegisteredClient registeredClient = oAuth2Utils.getRegisteredClient(clientId);
+                    RegisteredClient registeredClient = oAuth2Service.getRegisteredClient(clientId);
                     if (registeredClient == null
                             || !registeredClient.getId().equals(authorization.getRegisteredClientId())) {
                         Map<String, Object> errorResponse = new HashMap<>();
@@ -253,7 +253,7 @@ public class OAuth2Controller {
 
             // 3. 验证客户端ID
             // 直接通过clientId查找RegisteredClient，然后比较registeredClientId
-            RegisteredClient registeredClientForValidation = oAuth2Utils.getRegisteredClient(clientId);
+            RegisteredClient registeredClientForValidation = oAuth2Service.getRegisteredClient(clientId);
             if (registeredClientForValidation == null
                     || !registeredClientForValidation.getId().equals(authorization.getRegisteredClientId())) {
                 Map<String, Object> errorResponse = new HashMap<>();
@@ -273,7 +273,7 @@ public class OAuth2Controller {
             }
 
             // 5. 获取注册客户端和用户信息
-            RegisteredClient registeredClient = oAuth2Utils.getRegisteredClient(clientId);
+            RegisteredClient registeredClient = oAuth2Service.getRegisteredClient(clientId);
 
             // 6. 重新构建认证信息 - 需要从UserDetailsService重新加载用户权限
             String username = authorization.getPrincipalName();
@@ -297,7 +297,7 @@ public class OAuth2Controller {
             OAuth2Authorization.Builder authorizationBuilder = OAuth2Authorization.from(authorization);
 
             // 8. 生成新的访问令牌
-            OAuth2AccessToken newAccessToken = oAuth2Utils.generateAccessToken(authentication, registeredClient,
+            OAuth2AccessToken newAccessToken = oAuth2Service.generateAccessToken(authentication, registeredClient,
                     authorizationBuilder);
 
             // 9. 使用刷新令牌轮换机制
@@ -306,7 +306,7 @@ public class OAuth2Controller {
                     authorization.getPrincipalName(), clientId);
 
             // 生成全新的刷新令牌，不再重用旧的
-            OAuth2RefreshToken newRefreshToken = oAuth2Utils.generateRefreshToken(authentication, registeredClient,
+            OAuth2RefreshToken newRefreshToken = oAuth2Service.generateRefreshToken(authentication, registeredClient,
                     authorizationBuilder);
 
             // 仍然生成新的授权ID，避免覆盖原授权记录

@@ -2,7 +2,7 @@
 ### 测试客户端凭证授权流程
 
 ### 1. 正常的token获取请求
-POST http://localhost:9000/v1/oauth2/token
+POST http://localhost:9010/v1/oauth2/token
 Authorization: Basic SDEyZV9ZUlBuTEZMSE1ZcTpJUFNHLVliRERKNENfdHNjRC1PdVlmcmZTbVZXOFVLVg==
 Content-Type: application/x-www-form-urlencoded
 

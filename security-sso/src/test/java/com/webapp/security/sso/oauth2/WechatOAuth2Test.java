@@ -1,12 +1,10 @@
 package com.webapp.security.sso.oauth2;
 
 import com.webapp.security.core.entity.SysUser;
-import com.webapp.security.core.entity.SysWechatUser;
 import com.webapp.security.core.service.SysUserService;
 import com.webapp.security.core.service.SysWechatUserService;
-import com.webapp.security.sso.oauth2.controller.WechatOAuth2Controller;
 import com.webapp.security.sso.oauth2.service.WechatOAuth2StateService;
-import com.webapp.security.sso.oauth2.service.WechatUserService;
+import com.webapp.security.sso.third.wechat.WechatUserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -14,7 +12,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 
 import java.util.Optional;
 import java.util.UUID;

@@ -1,4 +1,4 @@
-package com.webapp.security.sso.oauth2.service;
+package com.webapp.security.sso.oauth2.expand;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;

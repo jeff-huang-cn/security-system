@@ -22,13 +22,13 @@ import org.springframework.stereotype.Component;
  * 提供OAuth2相关的公共方法
  */
 @Component
-public class OAuth2Utils {
+public class OAuth2Service {
 
     private final RegisteredClientRepository registeredClientRepository;
     private final OAuth2TokenGenerator<?> tokenGenerator;
     private final AuthorizationServerSettings authorizationServerSettings;
 
-    public OAuth2Utils(
+    public OAuth2Service(
             RegisteredClientRepository registeredClientRepository,
             OAuth2TokenGenerator<?> tokenGenerator,
             AuthorizationServerSettings authorizationServerSettings) {

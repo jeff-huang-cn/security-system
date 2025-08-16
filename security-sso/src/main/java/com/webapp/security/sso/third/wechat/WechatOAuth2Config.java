@@ -1,11 +1,8 @@
-package com.webapp.security.sso.config;
+package com.webapp.security.sso.third.wechat;
 
-import com.webapp.security.sso.oauth2.service.WechatUserService;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.client.RestTemplate;
 
 /**
  * 微信OAuth2配置类

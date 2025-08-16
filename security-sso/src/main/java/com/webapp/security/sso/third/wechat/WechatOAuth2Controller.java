@@ -1,14 +1,13 @@
-package com.webapp.security.sso.oauth2.controller;
+package com.webapp.security.sso.third.wechat;
 
 import com.webapp.security.core.config.ClientIdConfig;
 import com.webapp.security.core.entity.SysUser;
 import com.webapp.security.core.entity.SysWechatUser;
 import com.webapp.security.core.service.SysUserService;
 import com.webapp.security.core.service.SysWechatUserService;
-import com.webapp.security.sso.oauth2.service.OAuth2Utils;
+import com.webapp.security.sso.oauth2.service.OAuth2Service;
 import com.webapp.security.sso.oauth2.service.WechatOAuth2StateService;
-import com.webapp.security.sso.oauth2.service.WechatUserService;
-import com.webapp.security.sso.oauth2.service.WechatUserService.WechatUserInfo;
+import com.webapp.security.sso.third.wechat.WechatUserService.WechatUserInfo;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -28,9 +27,6 @@ import org.springframework.security.oauth2.server.authorization.OAuth2Authorizat
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
 import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
-import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
-import org.springframework.security.oauth2.server.authorization.context.AuthorizationServerContext;
-import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
 import org.springframework.security.oauth2.server.authorization.token.DefaultOAuth2TokenContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenGenerator;
@@ -70,7 +66,7 @@ public class WechatOAuth2Controller {
     private final OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator;
 
     // 添加OAuth2Utils和ClientIdConfig依赖
-    private final OAuth2Utils oAuth2Utils;
+    private final OAuth2Service oAuth2Service;
     private final ClientIdConfig clientIdConfig;
 
     // 添加WechatOAuth2StateService依赖
@@ -215,7 +211,7 @@ public class WechatOAuth2Controller {
             String clientId = clientIdConfig.getWebappClientId();
 
             // 使用公共方法获取注册的客户端
-            RegisteredClient registeredClient = oAuth2Utils.getRegisteredClient(clientId);
+            RegisteredClient registeredClient = oAuth2Service.getRegisteredClient(clientId);
 
             // 创建认证对象
             List<SimpleGrantedAuthority> authorities = new ArrayList<>();
@@ -270,7 +266,7 @@ public class WechatOAuth2Controller {
         OAuth2TokenContext tokenContext = DefaultOAuth2TokenContext.builder()
                 .registeredClient(registeredClient)
                 .principal(authentication)
-                .authorizationServerContext(oAuth2Utils.createAuthorizationServerContext()) // 使用公共方法
+                .authorizationServerContext(oAuth2Service.createAuthorizationServerContext()) // 使用公共方法
                 .tokenType(OAuth2TokenType.ACCESS_TOKEN)
                 .authorizationGrantType(AuthorizationGrantType.PASSWORD)
                 .authorizedScopes(registeredClient.getScopes())

@@ -1,6 +1,5 @@
-package com.webapp.security.sso.oauth2.service;
+package com.webapp.security.sso.third.wechat;
 
-import com.webapp.security.sso.config.WechatOAuth2Config;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -13,9 +12,6 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * 微信用户服务
@@ -38,7 +34,7 @@ public class WechatUserService {
                 .queryParam("appid", wechatConfig.getAppId())
                 .queryParam("redirect_uri", wechatConfig.getRedirectUri())
                 .queryParam("response_type", "code")
-                .queryParam("scope", "snsapi_login")
+                .queryParam("scope", "snsapi_base")
                 .queryParam("state", state)
                 .build().toUriString() + "#wechat_redirect";
     }

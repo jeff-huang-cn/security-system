@@ -1,4 +1,4 @@
-package com.webapp.security.sso.oauth2.service;
+package com.webapp.security.sso.oauth2.expand;
 
 import com.webapp.security.core.entity.SysUser;
 import com.webapp.security.core.mapper.SysUserMapper;
