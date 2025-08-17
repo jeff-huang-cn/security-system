@@ -223,67 +223,6 @@ public class GitHubUserService {
     }
 
     /**
-     * 处理GitHub用户登录 (旧方法，保留向后兼容)
-     * 
-     * @param githubUser GitHub用户信息
-     * @return 处理结果，包含token或用户信息
-     */
-    @Transactional
-    public Map<String, Object> processLogin(GitHubUserInfo githubUser) {
-        try {
-            if (githubUser == null || githubUser.getId() == null) {
-                Map<String, Object> result = new HashMap<>();
-                result.put("error", "GitHub用户信息无效");
-                return result;
-            }
-
-            // 查询是否已存在GitHub用户
-            SysGithubUser sysGithubUser = sysGithubUserService.getByGithubId(githubUser.getId());
-
-            if (sysGithubUser == null) {
-                // 创建新的GitHub用户记录
-                sysGithubUser = createGithubUser(githubUser);
-
-                // 返回未绑定状态，前端需要展示绑定/注册选项
-                Map<String, Object> result = new HashMap<>();
-                result.put("bound", false);
-                result.put("githubId", githubUser.getId());
-                result.put("githubUser", sysGithubUser);
-                return result;
-            } else if (sysGithubUser.getUserId() != null) {
-                // 已绑定系统用户，直接登录
-                SysUser user = sysUserService.getById(sysGithubUser.getUserId());
-                if (user != null) {
-                    // 更新GitHub用户信息
-                    updateGithubUser(sysGithubUser, githubUser);
-
-                    // 生成token
-                    Map<String, Object> tokenInfo = userLoginService.generateUserToken(user);
-
-                    Map<String, Object> result = new HashMap<>();
-                    result.put("bound", true);
-                    result.put("token", tokenInfo);
-                    result.put("user", user);
-                    return result;
-                }
-            }
-
-            // GitHub用户存在但未绑定系统用户，或绑定的系统用户不存在
-            Map<String, Object> result = new HashMap<>();
-            result.put("bound", false);
-            result.put("githubId", githubUser.getId());
-            result.put("githubUser", sysGithubUser);
-            return result;
-
-        } catch (Exception e) {
-            logger.error("处理GitHub登录失败", e);
-            Map<String, Object> result = new HashMap<>();
-            result.put("error", "处理GitHub登录失败: " + e.getMessage());
-            return result;
-        }
-    }
-
-    /**
      * 绑定现有用户
      * 
      * @param githubId GitHub用户ID

@@ -129,6 +129,7 @@ public class AlipayOAuth2Controller {
                             .queryParam("token_type", tokenInfo.get("token_type"))
                             .queryParam("expires_in", tokenInfo.get("expires_in"))
                             .queryParam("refresh_token", tokenInfo.get("refresh_token"))
+                            .queryParam("username", tokenInfo.get("username"))
                             .build()
                             .toUriString();
 

@@ -30,13 +30,14 @@ const ThirdPartyCallback: React.FC<ThirdPartyCallbackProps> = ({ onLogin }) => {
   useEffect(() => {
     // 解析URL中的参数
     const params = new URLSearchParams(location.search);
-    const token = params.get('token');
+    const token = params.get('access_token');
     const errorMsg = params.get('error');
     const encryptedOpenId = params.get('encryptedOpenId');
     const nickname = params.get('nickname');
     const headimgurl = params.get('headimgurl');
     const code = params.get('code');
     const state = params.get('state');
+    const username = params.get('username');
     
     // 从URL参数中获取平台信息
     const platformParam = params.get('platform') as 'github' | 'wechat' | 'alipay' | '';
@@ -63,7 +64,7 @@ const ThirdPartyCallback: React.FC<ThirdPartyCallbackProps> = ({ onLogin }) => {
       TokenManager.saveTokens(accessToken, refreshToken || undefined, validExpiresIn);
       
       // 调用登录回调
-      onLogin({ username: `${platformParam}_user` }, accessToken);
+      onLogin({ username: username }, accessToken);
       
       // 跳转到首页
       navigate('/dashboard');

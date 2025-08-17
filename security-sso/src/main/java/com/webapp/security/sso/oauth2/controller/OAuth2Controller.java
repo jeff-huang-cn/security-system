@@ -14,6 +14,8 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.security.oauth2.core.OAuth2RefreshToken;
@@ -24,7 +26,9 @@ import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenGenerator;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.support.WebApplicationContextUtils;
 
+import javax.servlet.http.HttpServletRequest;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -216,7 +220,7 @@ public class OAuth2Controller {
     @PostMapping("/refresh")
     public ResponseEntity<?> refreshToken(
             @RequestBody RefreshTokenRequest refreshTokenRequest,
-            javax.servlet.http.HttpServletRequest request) {
+            HttpServletRequest request) {
         try {
             String refreshTokenValue = refreshTokenRequest.getRefreshToken();
             // 从ClientContext获取clientId，如果为空则使用默认的webapp客户端ID
@@ -279,12 +283,12 @@ public class OAuth2Controller {
             String username = authorization.getPrincipalName();
 
             // 从Spring上下文中获取UserDetailsService
-            org.springframework.security.core.userdetails.UserDetailsService userDetailsService = org.springframework.web.context.support.WebApplicationContextUtils
+            UserDetailsService userDetailsService = WebApplicationContextUtils
                     .getRequiredWebApplicationContext(request.getServletContext())
-                    .getBean(org.springframework.security.core.userdetails.UserDetailsService.class);
+                    .getBean(UserDetailsService.class);
 
             // 加载完整的用户详情，包括权限
-            org.springframework.security.core.userdetails.UserDetails userDetails = userDetailsService
+            UserDetails userDetails = userDetailsService
                     .loadUserByUsername(username);
 
             // 使用完整的用户权限创建新的认证对象

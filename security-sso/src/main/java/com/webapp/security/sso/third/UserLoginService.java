@@ -3,13 +3,18 @@ package com.webapp.security.sso.third;
 import com.webapp.security.core.config.ClientIdConfig;
 import com.webapp.security.core.entity.SysUser;
 import com.webapp.security.core.service.SysUserService;
+import com.webapp.security.sso.oauth2.SpringContextHolder;
+import com.webapp.security.sso.oauth2.context.ClientContext;
 import com.webapp.security.sso.oauth2.service.OAuth2Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.security.oauth2.core.OAuth2RefreshToken;
 import org.springframework.security.oauth2.server.authorization.OAuth2Authorization;
@@ -17,6 +22,7 @@ import org.springframework.security.oauth2.server.authorization.OAuth2Authorizat
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.support.WebApplicationContextUtils;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -45,7 +51,8 @@ public class UserLoginService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
-
+    @Autowired
+    private OAuth2AuthorizationService authorizationService;
     /**
      * 生成用户令牌
      * 
@@ -53,17 +60,29 @@ public class UserLoginService {
      * @return 令牌信息
      */
     public Map<String, Object> generateUserToken(SysUser user) {
+        String clientId = ClientContext.getClientId();
+        if (clientId == null || clientId.trim().isEmpty()) {
+            clientId = clientIdConfig.getWebappClientId();
+        }
         // 获取客户端
-        RegisteredClient registeredClient = oAuth2Service.getRegisteredClient(clientIdConfig.getWebappClientId());
+        RegisteredClient registeredClient = oAuth2Service.getRegisteredClient(clientId);
+        String username = user.getUsername();
+
+        UserDetailsService userDetailsService = SpringContextHolder.getBean(UserDetailsService.class);
+
+        UserDetails userDetails = userDetailsService
+                .loadUserByUsername(username);
 
         // 创建认证对象
         Authentication authentication = new UsernamePasswordAuthenticationToken(
-                user.getUsername(), null, Collections.emptyList());
+                userDetails, null, userDetails.getAuthorities());
 
         // 创建授权构建器
-        OAuth2Authorization.Builder authorizationBuilder = OAuth2Authorization.withRegisteredClient(registeredClient)
+        OAuth2Authorization.Builder authorizationBuilder = OAuth2Authorization
+                .withRegisteredClient(registeredClient)
                 .principalName(user.getUsername())
-                .attribute("user_id", user.getUserId());
+                .authorizationGrantType(AuthorizationGrantType.PASSWORD)
+                .authorizedScopes(registeredClient.getScopes());
 
         // 生成访问令牌
         OAuth2AccessToken accessToken = oAuth2Service.generateAccessToken(
@@ -76,6 +95,9 @@ public class UserLoginService {
                 authentication,
                 registeredClient,
                 authorizationBuilder);
+
+        OAuth2Authorization authorization = authorizationBuilder.build();
+        authorizationService.save(authorization);
 
         long expiresIn = 0;
         if (accessToken.getExpiresAt() != null) {
