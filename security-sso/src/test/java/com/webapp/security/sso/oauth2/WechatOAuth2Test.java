@@ -3,7 +3,7 @@ package com.webapp.security.sso.oauth2;
 import com.webapp.security.core.entity.SysUser;
 import com.webapp.security.core.service.SysUserService;
 import com.webapp.security.core.service.SysWechatUserService;
-import com.webapp.security.sso.oauth2.service.WechatOAuth2StateService;
+import com.webapp.security.sso.third.wechat.WechatOAuth2StateService;
 import com.webapp.security.sso.third.wechat.WechatUserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

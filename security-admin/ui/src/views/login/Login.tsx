@@ -1,6 +1,6 @@
 ﻿import React, { useState } from "react";
-import { Form, Input, Button, Card, message, Typography, Space } from "antd";
-import { UserOutlined, LockOutlined, LoginOutlined, WechatOutlined } from "@ant-design/icons";
+import { Form, Input, Button, Card, message, Typography, Space, Divider } from "antd";
+import { UserOutlined, LockOutlined, LoginOutlined, WechatOutlined, GithubOutlined } from "@ant-design/icons";
 import { authService } from "../../services/authService";
 
 // API基础URL
@@ -42,6 +42,16 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const handleWechatLogin = () => {
     // 跳转到微信授权页面
     window.location.href = `${API_BASE_URL}/oauth2/wechat/authorize`;
+  };
+  
+  const handleGithubLogin = () => {
+    // 跳转到GitHub授权页面
+    window.location.href = `${API_BASE_URL}/oauth2/github/authorize`;
+  };
+  
+  const handleAlipayLogin = () => {
+    // 跳转到支付宝授权页面
+    window.location.href = `${API_BASE_URL}/oauth2/alipay/authorize`;
   };
 
   return (
@@ -123,7 +133,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             />
           </Form.Item>
 
-          <Form.Item style={{ marginBottom: 0 }}>
+          <Form.Item style={{ marginBottom: 16 }}>
             <Button
               type="primary"
               htmlType="submit"
@@ -141,18 +151,40 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             </Button>
           </Form.Item>
 
-          {/* 添加微信登录按钮 */}
-          <Form.Item>
+          <Divider plain>
+            <Text type="secondary">第三方账号登录</Text>
+          </Divider>
+
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', marginTop: '16px' }}>
             <Button 
-              type="default" 
-              icon={<WechatOutlined />} 
-              className="login-form-button wechat-login-button" 
+              type="text" 
+              shape="circle" 
+              size="large"
+              icon={<WechatOutlined style={{ fontSize: '24px', color: '#07C160' }} />} 
               onClick={handleWechatLogin}
-              style={{ backgroundColor: '#07C160', color: '#fff', border: 'none' }}
-            >
-              微信登录
-            </Button>
-          </Form.Item>
+              title="微信登录"
+            />
+            <Button 
+              type="text" 
+              shape="circle" 
+              size="large"
+              icon={<GithubOutlined style={{ fontSize: '24px' }} />} 
+              onClick={handleGithubLogin}
+              title="GitHub登录"
+            />
+            <Button 
+              type="text" 
+              shape="circle" 
+              size="large"
+              icon={
+                <svg viewBox="0 0 1024 1024" width="24" height="24" fill="#1677FF">
+                  <path d="M230.1 630.2l-76.9 132.9h152.2l76.9-132.9H230.1z m224.2-387.7l-76.9 133h304.4l76.9-133H454.3z m0 258.5l-76.9 133h228.2l76.9-133H454.3z m380.5-258.5h-76.2l-76.9 133h152.2l76.9-133h-76z m0 258.5h-76.2l-76.9 133h152.2l76.9-133h-76z" />
+                </svg>
+              } 
+              onClick={handleAlipayLogin}
+              title="支付宝登录"
+            />
+          </div>
         </Form>
 
         <div style={{ 

@@ -40,7 +40,7 @@ public class OAuth2Controller {
     private static final Logger log = LoggerFactory.getLogger(OAuth2Controller.class);
 
     private final AuthenticationManager authenticationManager;
-    private final OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator;
+    //private final OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator;
     private final OAuth2AuthorizationService authorizationService;
 
     // 添加OAuth2Utils依赖

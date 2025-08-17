@@ -78,34 +78,45 @@ oauth2:
     base-url: ${SERVER_BASE_URL:http://127.0.0.1:9000}
     # JWK Set URI
     jwk-set-uri: ${oauth2.server.base-url}/.well-known/jwks.json
-  # OpenAPI认证配置
-  openapi:
-    # 共享的OAuth2客户端ID
-    client-id: openapi
-    # 共享客户端的密钥（生产环境建议使用ENC(...)或环境变量覆盖）
-    client-secret: IPSG-YbDDJ4C_tscD-OuYfrfSmVW8UKV
-    # 令牌默认有效期（秒）
-    token-validity-seconds: 7200
-    # 是否启用防重放攻击保护
-    enable-replay-protection: false
-    # 时间戳有效期（秒）
-    timestamp-valid-seconds: 300
   # 客户端ID配置
   client:
     # API客户端ID
     api-client-id: openapi
     # Web应用客户端ID
     webapp-client-id: webapp-client
-
-# 微信OAuth2配置
-wechat:
-  oauth2:
+  # 前端回调配置
+  frontend:
+    callback-url: ${FRONTEND_CALLBACK_URL:http://localhost:8081/oauth2/callback}
+  # 微信OAuth2配置
+  wechat:
     app-id: ${WECHAT_APP_ID:wx985e9aa00f16b0e0}
     app-secret: ${WECHAT_APP_SECRET:0ed86594047220b717cda81a1b355e23}
     redirect-uri: ${WECHAT_REDIRECT_URI:https://885ro126ov70.vicp.fun/oauth2/wechat/callback}
     authorize-url: https://open.weixin.qq.com/connect/qrconnect
     access-token-url: https://api.weixin.qq.com/sns/oauth2/access_token
     user-info-url: https://api.weixin.qq.com/sns/userinfo
+    frontend-callback-url: ${oauth2.frontend.callback-url}
+
+  # GitHub OAuth2配置
+  github:
+    app-id: ${GITHUB_APP_ID:}
+    app-secret: ${GITHUB_APP_SECRET:}
+    redirect-uri: ${GITHUB_REDIRECT_URI:https://885ro126ov70.vicp.fun/oauth2/github/callback}
+    authorize-url: https://github.com/login/oauth/authorize
+    token-url: https://github.com/login/oauth/access_token
+    user-info-url: https://api.github.com/user
+    user-emails-url: https://api.github.com/user/emails
+    scope: user:email
+    frontend-callback-url: ${oauth2.frontend.callback-url}
+
+  # 支付宝OAuth2配置
+  alipay:
+    app-id: ${ALIPAY_APP_ID:}
+    private-key: ${ALIPAY_PRIVATE_KEY:}
+    public-key: ${ALIPAY_PUBLIC_KEY:}
+    gateway-url: https://openapi.alipay.com/gateway.do
+    redirect-uri: https://885ro126ov70.vicp.fun/oauth2/alipay/callback
+    frontend-callback-url: ${oauth2.frontend.callback-url}
 
 # 自定义JWT配置
 custom:

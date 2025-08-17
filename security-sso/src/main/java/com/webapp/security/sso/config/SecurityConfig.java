@@ -96,20 +96,20 @@ public class SecurityConfig {
         @Order(2)
         public SecurityFilterChain openApiSecurityFilterChain(
                         HttpSecurity http) throws Exception {
-            http
-                    // 使用requestMatchers()替代antMatcher()来匹配多个路径
-                    .requestMatchers(matchers -> matchers
-                            .antMatchers("/api/v1/**", "/oauth2/introspect"))
-                    .authorizeHttpRequests(auth -> auth
-                            // 为自省端点添加特定的认证要求
-                            .antMatchers("/oauth2/introspect").authenticated()
-                            // 其他API路径保持不变
-                            .anyRequest().authenticated())
-                    // 为自省端点启用HTTP Basic认证
-                    .httpBasic(Customizer.withDefaults())
-                    .csrf(AbstractHttpConfigurer::disable)
-                    .sessionManagement(session -> session
-                            .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+                http
+                                // 使用requestMatchers()替代antMatcher()来匹配多个路径
+                                .requestMatchers(matchers -> matchers
+                                                .antMatchers("/api/v1/**", "/oauth2/introspect"))
+                                .authorizeHttpRequests(auth -> auth
+                                                // 为自省端点添加特定的认证要求
+                                                .antMatchers("/oauth2/introspect").authenticated()
+                                                // 其他API路径保持不变
+                                                .anyRequest().authenticated())
+                                // 为自省端点启用HTTP Basic认证
+                                .httpBasic(Customizer.withDefaults())
+                                .csrf(AbstractHttpConfigurer::disable)
+                                .sessionManagement(session -> session
+                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
                 return http.build();
         }
 
@@ -125,7 +125,7 @@ public class SecurityConfig {
                                                                 "/.well-known/jwks.json",
                                                                 "/api/token-blacklist/**", "/favicon.ico",
                                                                 "/css/**", "/js/**", "/images/**", "/webjars/**",
-                                                                "/error")
+                                                                "/error","/oauth2/**/**")
                                                 .permitAll()
                                                 .anyRequest().authenticated())
                                 .formLogin(form -> form

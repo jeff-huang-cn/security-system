@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Configuration;
  * 微信OAuth2配置类
  */
 @Configuration
-@ConfigurationProperties(prefix = "wechat.oauth2")
+@ConfigurationProperties(prefix = "oauth2.wechat")
 @Data
 public class WechatOAuth2Config {
 
@@ -41,4 +41,6 @@ public class WechatOAuth2Config {
      * 获取用户信息URL
      */
     private String userInfoUrl = "https://api.weixin.qq.com/sns/userinfo";
+
+    private String frontendCallbackUrl;
 }

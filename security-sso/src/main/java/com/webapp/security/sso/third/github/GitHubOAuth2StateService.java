@@ -1,4 +1,4 @@
-package com.webapp.security.sso.oauth2.service;
+package com.webapp.security.sso.third.github;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -8,14 +8,14 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 微信OAuth2 State管理服务
+ * GitHub OAuth2 State管理服务
  * 用于生成、存储和验证OAuth2授权过程中的state参数
  * 防止CSRF攻击
  */
 @Service
-public class WechatOAuth2StateService {
+public class GitHubOAuth2StateService {
 
-    private static final String WECHAT_STATE_PREFIX = "wechat:oauth2:state:";
+    private static final String GITHUB_STATE_PREFIX = "github:oauth2:state:";
     private static final long STATE_EXPIRE_SECONDS = 600; // 10分钟过期
 
     @Autowired
@@ -28,7 +28,7 @@ public class WechatOAuth2StateService {
      */
     public String generateAndSaveState() {
         String state = UUID.randomUUID().toString();
-        String key = WECHAT_STATE_PREFIX + state;
+        String key = GITHUB_STATE_PREFIX + state;
         redisTemplate.opsForValue().set(key, "1", STATE_EXPIRE_SECONDS, TimeUnit.SECONDS);
         return state;
     }
@@ -44,7 +44,7 @@ public class WechatOAuth2StateService {
             return false;
         }
 
-        String key = WECHAT_STATE_PREFIX + state;
+        String key = GITHUB_STATE_PREFIX + state;
         Boolean exists = redisTemplate.hasKey(key);
 
         if (Boolean.TRUE.equals(exists)) {

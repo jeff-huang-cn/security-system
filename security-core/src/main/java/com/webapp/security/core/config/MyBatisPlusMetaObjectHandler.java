@@ -32,7 +32,9 @@ public class MyBatisPlusMetaObjectHandler implements MetaObjectHandler {
     public void insertFill(MetaObject metaObject) {
         log.debug("Start insert fill ...");
 
-        // 创建时间和更新时间已经通过注解配置了自动填充，这里不需要重复设置
+        // 自动填充创建时间和更新时间
+        this.strictInsertFill(metaObject, "createTime", LocalDateTime.class, LocalDateTime.now());
+        this.strictInsertFill(metaObject, "updateTime", LocalDateTime.class, LocalDateTime.now());
 
         // 设置创建者
         String currentUsername = getCurrentUsername();
@@ -55,7 +57,8 @@ public class MyBatisPlusMetaObjectHandler implements MetaObjectHandler {
     public void updateFill(MetaObject metaObject) {
         log.debug("Start update fill ...");
 
-        // 更新时间已经通过注解配置了自动填充，这里不需要重复设置
+        // 自动填充更新时间
+        this.strictUpdateFill(metaObject, "updateTime", LocalDateTime.class, LocalDateTime.now());
 
         // 设置更新者
         String currentUsername = getCurrentUsername();

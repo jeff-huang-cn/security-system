@@ -6,7 +6,6 @@ import com.webapp.security.core.entity.SysWechatUser;
 import com.webapp.security.core.service.SysUserService;
 import com.webapp.security.core.service.SysWechatUserService;
 import com.webapp.security.sso.oauth2.service.OAuth2Service;
-import com.webapp.security.sso.oauth2.service.WechatOAuth2StateService;
 import com.webapp.security.sso.third.wechat.WechatUserService.WechatUserInfo;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -31,11 +30,15 @@ import org.springframework.security.oauth2.server.authorization.token.DefaultOAu
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenGenerator;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 import javax.servlet.http.HttpServletResponse;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Duration;
 import java.time.Instant;
@@ -71,6 +74,7 @@ public class WechatOAuth2Controller {
 
     // 添加WechatOAuth2StateService依赖
     private final WechatOAuth2StateService stateService;
+    private final WechatOAuth2Config wechatOAuth2Config;
 
     /**
      * 发起微信授权请求
@@ -88,41 +92,89 @@ public class WechatOAuth2Controller {
         return new ResponseEntity<>(headers, HttpStatus.FOUND);
     }
 
-    /**
-     * 处理微信授权回调
-     */
     @GetMapping("/callback")
-    public ResponseEntity<?> callback(@RequestParam String code, @RequestParam String state) {
+    public ResponseEntity<?> callback(@RequestParam String code, @RequestParam String state)
+            throws UnsupportedEncodingException {
         // 验证state，防止CSRF攻击
         if (!stateService.validateState(state)) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("无效的state参数，可能是CSRF攻击"));
+            // 重定向到前端错误页面
+            String redirectUrl = UriComponentsBuilder.fromUriString(wechatOAuth2Config.getFrontendCallbackUrl())
+                    .queryParam("error", URLEncoder.encode("无效的state参数，可能是CSRF攻击", StandardCharsets.UTF_8.name()))
+                    .build()
+                    .toUriString();
+
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .header(HttpHeaders.LOCATION, redirectUrl)
+                    .build();
         }
 
-        // 获取微信用户信息
-        WechatUserInfo userInfo = wechatUserService.getUserInfo(code);
-        if (userInfo == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("获取微信用户信息失败"));
-        }
+        try {
+            // 获取微信用户信息
+            WechatUserInfo userInfo = wechatUserService.getUserInfo(code);
+            if (userInfo == null) {
+                // 重定向到前端错误页面
+                String redirectUrl = UriComponentsBuilder.fromUriString(wechatOAuth2Config.getFrontendCallbackUrl())
+                        .queryParam("error", URLEncoder.encode("获取微信用户信息失败", StandardCharsets.UTF_8.name()))
+                        .build()
+                        .toUriString();
 
-        // 查询是否已关联系统用户
-        Optional<Long> userId = sysWechatUserService.processWechatUser(
-                userInfo.getOpenid(),
-                userInfo.getUnionid(),
-                userInfo.getNickname(),
-                userInfo.getHeadimgurl(),
-                null, // 这里可以传入accessToken
-                null // 这里可以传入refreshToken
-        );
+                return ResponseEntity.status(HttpStatus.FOUND)
+                        .header(HttpHeaders.LOCATION, redirectUrl)
+                        .build();
+            }
 
-        if (userId.isPresent()) {
-            // 已关联，直接生成JWT
-            Map<String, Object> tokenResponse = generateTokenResponse(userId.get());
-            return ResponseEntity.ok(tokenResponse);
-        } else {
-            // 未关联，返回选择页面URL
-            String encryptedOpenId = encryptOpenId(userInfo.getOpenid());
-            return ResponseEntity
-                    .ok(new ChoiceResponse(encryptedOpenId, userInfo.getNickname(), userInfo.getHeadimgurl()));
+            // 查询是否已关联系统用户
+            Optional<Long> userId = sysWechatUserService.processWechatUser(
+                    userInfo.getOpenid(),
+                    userInfo.getUnionid(),
+                    userInfo.getNickname(),
+                    userInfo.getHeadimgurl(),
+                    null, // 这里可以传入accessToken
+                    null // 这里可以传入refreshToken
+            );
+
+            if (userId.isPresent()) {
+                // 已关联，直接生成JWT
+                Map<String, Object> tokenResponse = generateTokenResponse(userId.get());
+
+                // 重定向到前端应用，并附带令牌
+                String redirectUrl = UriComponentsBuilder.fromUriString(wechatOAuth2Config.getFrontendCallbackUrl())
+                        .queryParam("token", tokenResponse.get("access_token"))
+                        .build()
+                        .toUriString();
+
+                return ResponseEntity.status(HttpStatus.FOUND)
+                        .header(HttpHeaders.LOCATION, redirectUrl)
+                        .build();
+            } else {
+                // 未关联，返回选择页面，加密OpenID
+                String encryptedOpenId = encryptOpenId(userInfo.getOpenid());
+
+                // 重定向到前端，附带必要的参数
+                String redirectUrl = UriComponentsBuilder.fromUriString(wechatOAuth2Config.getFrontendCallbackUrl())
+                        .queryParam("platform", "wechat")
+                        .queryParam("encryptedOpenId", encryptedOpenId)
+                        .queryParam("nickname", URLEncoder.encode(userInfo.getNickname(), StandardCharsets.UTF_8.name()))
+                        .queryParam("headimgurl", userInfo.getHeadimgurl())
+                        .build()
+                        .toUriString();
+
+                return ResponseEntity.status(HttpStatus.FOUND)
+                        .header(HttpHeaders.LOCATION, redirectUrl)
+                        .build();
+            }
+        } catch (Exception e) {
+            logger.error("微信OAuth2回调处理失败", e);
+            // 重定向到前端错误页面
+            String redirectUrl = UriComponentsBuilder.fromUriString(wechatOAuth2Config.getFrontendCallbackUrl())
+                    .queryParam("error",
+                            URLEncoder.encode("处理微信登录时发生错误: " + e.getMessage(), StandardCharsets.UTF_8.name()))
+                    .build()
+                    .toUriString();
+
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .header(HttpHeaders.LOCATION, redirectUrl)
+                    .build();
         }
     }
 
@@ -375,7 +427,6 @@ public class WechatOAuth2Controller {
         }
     }
 
-
     /**
      * SHA1 加密工具方法
      */
@@ -386,7 +437,8 @@ public class WechatOAuth2Controller {
             StringBuilder hexStr = new StringBuilder();
             for (byte b : bytes) {
                 String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1) hexStr.append('0');
+                if (hex.length() == 1)
+                    hexStr.append('0');
                 hexStr.append(hex);
             }
             return hexStr.toString();
