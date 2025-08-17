@@ -57,6 +57,24 @@ public class SysGithubUser {
     private String avatarUrl;
 
     /**
+     * 个人简介
+     */
+    @TableField("bio")
+    private String bio;
+
+    /**
+     * 位置
+     */
+    @TableField("location")
+    private String location;
+
+    /**
+     * 公司
+     */
+    @TableField("company")
+    private String company;
+
+    /**
      * 创建时间
      */
     @TableField(value = "create_time", fill = FieldFill.INSERT)

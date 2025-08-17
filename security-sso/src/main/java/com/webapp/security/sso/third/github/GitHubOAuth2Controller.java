@@ -1,6 +1,7 @@
 package com.webapp.security.sso.third.github;
 
 import com.webapp.security.core.entity.SysUser;
+import com.webapp.security.core.service.SysGithubUserService;
 import com.webapp.security.core.service.SysUserService;
 import com.webapp.security.sso.third.UserLoginService;
 import com.webapp.security.sso.third.github.GitHubUserService.GitHubUserInfo;
@@ -47,6 +48,9 @@ public class GitHubOAuth2Controller {
 
     @Autowired
     private SysUserService sysUserService;
+
+    @Autowired
+    private SysGithubUserService sysGithubUserService;
 
     @Autowired
     private GitHubOAuth2Config gitHubOAuth2Config;
@@ -102,7 +106,16 @@ public class GitHubOAuth2Controller {
             }
 
             // 处理GitHub用户登录
-            Optional<Long> userId = gitHubUserService.processGithubUser(githubUser);
+            Optional<Long> userId = sysGithubUserService.processGithubUser(
+                    githubUser.getId(),
+                    githubUser.getLogin(),
+                    githubUser.getName(),
+                    githubUser.getEmail(),
+                    githubUser.getAvatarUrl(),
+                    githubUser.getBio(),
+                    githubUser.getLocation(),
+                    githubUser.getCompany()
+            );
 
             if (userId.isPresent()) {
                 // 已关联，直接生成令牌
@@ -113,7 +126,11 @@ public class GitHubOAuth2Controller {
 
                     // 重定向到前端应用，并附带令牌
                     String redirectUrl = UriComponentsBuilder.fromUriString(gitHubOAuth2Config.getFrontendCallbackUrl())
-                            .queryParam("token", tokenInfo.get("access_token"))
+                            .queryParam("access_token", tokenInfo.get("access_token"))
+                            .queryParam("token_type", tokenInfo.get("token_type"))
+                            .queryParam("expires_in", tokenInfo.get("expires_in"))
+                            .queryParam("refresh_token", tokenInfo.get("refresh_token"))
+                            .queryParam("username", tokenInfo.get("username"))
                             .build()
                             .toUriString();
 
@@ -168,9 +185,23 @@ public class GitHubOAuth2Controller {
             String githubIdStr = decryptGithubId(encryptedGithubId);
             Long githubId = Long.parseLong(githubIdStr);
 
-            // 调用服务绑定用户
-            Map<String, Object> result = gitHubUserService.bindExistingUser(githubId, username, password);
-            return ResponseEntity.ok(result);
+            // 验证用户名密码
+            SysUser user = sysUserService.getByUsername(username);
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse("用户名或密码错误"));
+            }
+
+            if (!userLoginService.verifyPassword(password, user.getPassword())) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse("用户名或密码错误"));
+            }
+
+            // 绑定账号
+            sysGithubUserService.bindUser(githubId, user.getUserId());
+
+            // 生成JWT
+            Map<String, Object> accessToken = userLoginService.generateUserToken(user);
+            return ResponseEntity.ok(accessToken);
+
         } catch (Exception e) {
             logger.error("绑定GitHub账号失败", e);
             Map<String, Object> errorResponse = new HashMap<>();
@@ -187,16 +218,37 @@ public class GitHubOAuth2Controller {
     public ResponseEntity<?> createAndBindUser(
             @RequestParam("encryptedGithubId") String encryptedGithubId,
             @RequestParam("username") String username,
-            @RequestParam("password") String password) {
+            @RequestParam("password") String password,
+            @RequestParam(required = false) String nickname,
+            @RequestParam(required = false) String headimgurl) {
 
         try {
             // 解密GitHub ID
             String githubIdStr = decryptGithubId(encryptedGithubId);
             Long githubId = Long.parseLong(githubIdStr);
 
-            // 调用服务创建并绑定用户
-            Map<String, Object> result = gitHubUserService.createAndBindUser(githubId, username, password);
-            return ResponseEntity.ok(result);
+            // 创建新用户
+            SysUser user = userLoginService.createUser(
+                    username,
+                    password,
+                    null, // email
+                    nickname != null ? nickname : "GitHub用户");
+
+            // 绑定GitHub账号
+            sysGithubUserService.bindGithubToUser(
+                    githubId,
+                    null, // login
+                    nickname,
+                    headimgurl,
+                    null, // bio
+                    null, // location
+                    null, // company
+                    user.getUserId());
+
+            // 生成JWT
+            Map<String, Object> accessToken = userLoginService.generateUserToken(user);
+            return ResponseEntity.ok(accessToken);
+
         } catch (Exception e) {
             logger.error("创建并绑定GitHub账号失败", e);
             Map<String, Object> errorResponse = new HashMap<>();
