@@ -47,8 +47,8 @@ public class AlipayUserService {
     public String getAuthorizeUrl(String state) {
         return UriComponentsBuilder.fromHttpUrl(alipayConfig.getAuthorizeUrl())
                 .queryParam("app_id", alipayConfig.getAppId())
-                .queryParam("scope", alipayConfig.getScope())
                 .queryParam("redirect_uri", alipayConfig.getRedirectUri())
+                .queryParam("scope", alipayConfig.getScope())
                 .queryParam("state", state)
                 .build().toUriString();
     }
@@ -95,6 +95,9 @@ public class AlipayUserService {
      * 获取支付宝用户信息（通过访问令牌）
      */
     public AlipayUserInfo getUserInfoByToken(String accessToken) {
+        if (accessToken == null) {
+            return null;
+        }
         try {
             AlipayUserInfoShareRequest request = new AlipayUserInfoShareRequest();
             AlipayUserInfoShareResponse response = alipayClient.execute(request, accessToken);

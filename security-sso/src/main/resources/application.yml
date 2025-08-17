@@ -89,7 +89,7 @@ oauth2:
     callback-url: ${FRONTEND_CALLBACK_URL:http://localhost:8081/oauth2/callback}
   # 微信OAuth2配置
   wechat:
-    app-id: ${WECHAT_APP_ID:wx985e9aa00f16b0e0}
+    app-id: ${WECHAT_APP_ID:}
     app-secret: ${WECHAT_APP_SECRET:0ed86594047220b717cda81a1b355e23}
     redirect-uri: ${WECHAT_REDIRECT_URI:https://885ro126ov70.vicp.fun/oauth2/wechat/callback}
     authorize-url: https://open.weixin.qq.com/connect/qrconnect
