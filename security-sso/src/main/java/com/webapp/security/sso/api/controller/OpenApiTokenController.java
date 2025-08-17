@@ -1,6 +1,7 @@
 package com.webapp.security.sso.api.controller;
 
 import com.webapp.security.core.entity.SysClientCredential;
+import com.webapp.security.core.model.OAuth2ErrorResponse;
 import com.webapp.security.core.service.SysClientCredentialService;
 import com.webapp.security.sso.api.service.TokenIntrospectionService;
 import lombok.RequiredArgsConstructor;
@@ -224,14 +225,8 @@ public class OpenApiTokenController {
     /**
      * 创建错误响应
      */
-    private ResponseEntity<Map<String, Object>> createErrorResponse(
+    private ResponseEntity<OAuth2ErrorResponse> createErrorResponse(
             String error, String description, int status) {
-        Map<String, Object> errorResponse = new HashMap<>();
-        Map<String, String> errorDetail = new HashMap<>();
-        errorDetail.put("code", String.valueOf(status).substring(0, 1) + "0001"); // 简化错误码
-        errorDetail.put("message", description);
-        errorResponse.put("error", errorDetail);
-
-        return ResponseEntity.status(status).body(errorResponse);
+        return OAuth2ErrorResponse.error(error, description, HttpStatus.valueOf(status));
     }
 }

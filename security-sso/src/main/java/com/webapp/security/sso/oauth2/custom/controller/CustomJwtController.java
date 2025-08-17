@@ -1,7 +1,9 @@
 package com.webapp.security.sso.oauth2.custom.controller;
 
+import com.webapp.security.core.model.OAuth2ErrorResponse;
 import com.webapp.security.sso.oauth2.custom.service.CustomJwtAuthenticationService;
 import org.slf4j.Logger;
+import org.springframework.http.HttpStatus;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
@@ -32,7 +34,7 @@ public class CustomJwtController {
      * POST /api/custom/jwt/login
      */
     @PostMapping("/login")
-    public ResponseEntity<Map<String, Object>> login(@RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
         try {
             log.info("Custom JWT login attempt for user: {}", loginRequest.getUsername());
 
@@ -43,9 +45,7 @@ public class CustomJwtController {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Custom JWT login failed for user {}: {}", loginRequest.getUsername(), e.getMessage());
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.badRequest().body(errorResponse);
+            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_REQUEST, e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -54,7 +54,7 @@ public class CustomJwtController {
      * POST /api/custom/jwt/refresh
      */
     @PostMapping("/refresh")
-    public ResponseEntity<Map<String, Object>> refreshToken(@RequestBody RefreshTokenRequest request) {
+    public ResponseEntity<?> refreshToken(@RequestBody RefreshTokenRequest request) {
         try {
             log.info("Custom JWT token refresh attempt");
 
@@ -63,9 +63,7 @@ public class CustomJwtController {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Custom JWT token refresh failed: {}", e.getMessage());
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.badRequest().body(errorResponse);
+            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_REQUEST, e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -74,7 +72,7 @@ public class CustomJwtController {
      * POST /api/custom/jwt/validate
      */
     @PostMapping("/validate")
-    public ResponseEntity<Map<String, Object>> validateToken(@RequestBody ValidateTokenRequest request) {
+    public ResponseEntity<?> validateToken(@RequestBody ValidateTokenRequest request) {
         try {
             boolean isValid = jwtAuthenticationService.validateToken(request.getToken());
 
@@ -82,15 +80,11 @@ public class CustomJwtController {
                 Map<String, Object> userInfo = jwtAuthenticationService.getUserInfoFromToken(request.getToken());
                 return ResponseEntity.ok(userInfo);
             } else {
-                Map<String, Object> errorResponse = new HashMap<>();
-                errorResponse.put("error", "Invalid token");
-                return ResponseEntity.badRequest().body(errorResponse);
+                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_REQUEST, "Invalid token", HttpStatus.BAD_REQUEST);
             }
         } catch (Exception e) {
             log.error("Custom JWT token validation failed: {}", e.getMessage());
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.badRequest().body(errorResponse);
+            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_REQUEST, e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -99,7 +93,7 @@ public class CustomJwtController {
      * POST /api/custom/jwt/revoke
      */
     @PostMapping("/revoke")
-    public ResponseEntity<Map<String, Object>> revokeToken(@RequestBody RevokeTokenRequest request) {
+    public ResponseEntity<?> revokeToken(@RequestBody RevokeTokenRequest request) {
         try {
             jwtAuthenticationService.revokeToken(request.getToken());
             Map<String, Object> response = new HashMap<>();
@@ -107,9 +101,7 @@ public class CustomJwtController {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Custom JWT token revocation failed: {}", e.getMessage());
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.badRequest().body(errorResponse);
+            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_REQUEST, e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -118,16 +110,14 @@ public class CustomJwtController {
      * GET /api/custom/jwt/userinfo
      */
     @GetMapping("/userinfo")
-    public ResponseEntity<Map<String, Object>> getUserInfo(@RequestHeader("Authorization") String authorization) {
+    public ResponseEntity<?> getUserInfo(@RequestHeader("Authorization") String authorization) {
         try {
             String token = authorization.replace("Bearer ", "");
             Map<String, Object> userInfo = jwtAuthenticationService.getUserInfoFromToken(token);
             return ResponseEntity.ok(userInfo);
         } catch (Exception e) {
             log.error("Failed to get user info from custom JWT: {}", e.getMessage());
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.badRequest().body(errorResponse);
+            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_REQUEST, e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
 

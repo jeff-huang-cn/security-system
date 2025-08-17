@@ -1,6 +1,7 @@
 package com.webapp.security.sso.third.github;
 
 import com.webapp.security.core.entity.SysUser;
+import com.webapp.security.core.model.OAuth2ErrorResponse;
 import com.webapp.security.core.service.SysGithubUserService;
 import com.webapp.security.core.service.SysUserService;
 import com.webapp.security.sso.third.UserLoginService;
@@ -188,11 +189,11 @@ public class GitHubOAuth2Controller {
             // 验证用户名密码
             SysUser user = sysUserService.getByUsername(username);
             if (user == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse("用户名或密码错误"));
+                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "用户名或密码错误", HttpStatus.UNAUTHORIZED);
             }
 
             if (!userLoginService.verifyPassword(password, user.getPassword())) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse("用户名或密码错误"));
+                return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "用户名或密码错误", HttpStatus.UNAUTHORIZED);
             }
 
             // 绑定账号
@@ -204,10 +205,7 @@ public class GitHubOAuth2Controller {
 
         } catch (Exception e) {
             logger.error("绑定GitHub账号失败", e);
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("success", false);
-            errorResponse.put("message", "绑定失败: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.SERVER_ERROR, "绑定失败: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -251,10 +249,7 @@ public class GitHubOAuth2Controller {
 
         } catch (Exception e) {
             logger.error("创建并绑定GitHub账号失败", e);
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("success", false);
-            errorResponse.put("message", "创建账号失败: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.SERVER_ERROR, "创建账号失败: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -291,11 +286,5 @@ public class GitHubOAuth2Controller {
         }
     }
 
-    /**
-     * 错误响应
-     */
-    @Data
-    public static class ErrorResponse {
-        private final String error;
-    }
+
 }

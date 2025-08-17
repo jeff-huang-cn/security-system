@@ -1,6 +1,7 @@
 package com.webapp.security.sso.oauth2.controller;
 
 import com.webapp.security.core.config.ClientIdConfig;
+import com.webapp.security.core.model.OAuth2ErrorResponse;
 import com.webapp.security.sso.oauth2.context.ClientContext;
 import com.webapp.security.sso.oauth2.model.LoginRequest;
 import com.webapp.security.sso.oauth2.model.RefreshTokenRequest;
@@ -118,28 +119,13 @@ public class OAuth2Controller {
 
         } catch (AuthenticationException e) {
             log.warn("OAuth2 Login failed for user: " + loginRequest.getUsername(), e);
-
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "invalid_grant");
-            errorResponse.put("error_description", "用户名或密码错误");
-
-            return ResponseEntity.status(401).body(errorResponse);
+            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_GRANT, "用户名或密码错误", org.springframework.http.HttpStatus.UNAUTHORIZED);
         } catch (IllegalStateException e) {
             log.warn("OAuth2 Client error: " + e.getMessage());
-
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "invalid_client");
-            errorResponse.put("error_description", e.getMessage());
-
-            return ResponseEntity.status(400).body(errorResponse);
+            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_CLIENT, e.getMessage(), org.springframework.http.HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
             log.error("OAuth2 Login error for user: " + loginRequest.getUsername(), e);
-
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "server_error");
-            errorResponse.put("error_description", "服务器内部错误");
-
-            return ResponseEntity.status(500).body(errorResponse);
+            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.SERVER_ERROR, "服务器内部错误", org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -343,20 +329,10 @@ public class OAuth2Controller {
 
         } catch (IllegalStateException e) {
             log.warn("OAuth2 Refresh token client error: " + e.getMessage());
-
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "invalid_client");
-            errorResponse.put("error_description", e.getMessage());
-
-            return ResponseEntity.status(400).body(errorResponse);
+            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.INVALID_CLIENT, e.getMessage(), org.springframework.http.HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
             log.error("Refresh token error", e);
-
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "server_error");
-            errorResponse.put("error_description", "刷新令牌失败");
-
-            return ResponseEntity.status(500).body(errorResponse);
+            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.SERVER_ERROR, "刷新令牌失败", org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 

@@ -1,5 +1,6 @@
 package com.webapp.security.sso.api.controller;
 
+import com.webapp.security.core.model.OAuth2ErrorResponse;
 import com.webapp.security.sso.api.service.TokenIntrospectionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,7 +67,7 @@ public class TokenIntrospectionController {
      * @return 令牌自省结果
      */
     @PostMapping("/v1/oauth2/introspect")
-    public ResponseEntity<Map<String, Object>> introspect(
+    public ResponseEntity<?> introspect(
             @RequestParam("token") String token,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
         logger.info("Received introspection request for token: {}...", token.substring(0, Math.min(token.length(), 8)));
@@ -77,11 +78,7 @@ public class TokenIntrospectionController {
             clientAuthentication = authenticateClient(authHeader);
         } catch (BadCredentialsException e) {
             logger.warn("Client authentication failed: {}", e.getMessage());
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("active", false);
-            errorResponse.put("error", "unauthorized_client");
-            errorResponse.put("error_description", e.getMessage());
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+            return OAuth2ErrorResponse.error(OAuth2ErrorResponse.UNAUTHORIZED_CLIENT, e.getMessage(), HttpStatus.UNAUTHORIZED);
         }
         // 设置认证上下文
         SecurityContextHolder.getContext().setAuthentication(clientAuthentication);

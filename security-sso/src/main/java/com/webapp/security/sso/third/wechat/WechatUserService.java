@@ -1,9 +1,9 @@
 package com.webapp.security.sso.third.wechat;
 
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -18,13 +18,15 @@ import java.time.LocalDateTime;
  * 处理微信OAuth2认证和用户信息获取
  */
 @Service
-@RequiredArgsConstructor
 public class WechatUserService {
 
     private static final Logger logger = LoggerFactory.getLogger(WechatUserService.class);
 
-    private final WechatOAuth2Config wechatConfig;
-    private final RestTemplate restTemplate;
+    @Autowired
+    private WechatOAuth2Config wechatConfig;
+
+    @Autowired
+    private RestTemplate restTemplate;
 
     /**
      * 获取微信授权URL
